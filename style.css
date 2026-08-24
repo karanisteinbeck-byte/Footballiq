@@ -1,0 +1,653 @@
+/* =========================================================
+   FOOTBALL IQ TRAINER — STYLE.CSS
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    background: #071b12;
+    color: white;
+}
+
+
+/* =========================================================
+   CANVAS
+   ========================================================= */
+
+#gameCanvas {
+    position: fixed;
+
+    left: 0;
+    top: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    display: block;
+
+    touch-action: none;
+}
+
+
+/* =========================================================
+   GENERAL SCREENS
+   ========================================================= */
+
+.screen {
+    position: fixed;
+
+    inset: 0;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    padding: 20px;
+
+    background:
+        linear-gradient(
+            rgba(3, 15, 10, 0.45),
+            rgba(3, 15, 10, 0.75)
+        );
+
+    z-index: 20;
+}
+
+
+.hidden {
+    display: none !important;
+}
+
+
+/* =========================================================
+   MAIN MENU CARD
+   ========================================================= */
+
+.menu-card,
+.result-card {
+
+    width: min(
+        92vw,
+        430px
+    );
+
+    padding: 32px 25px;
+
+    border-radius: 24px;
+
+    background:
+        rgba(8, 25, 17, 0.94);
+
+    border:
+        1px solid
+        rgba(255,255,255,0.12);
+
+    box-shadow:
+        0 25px 70px
+        rgba(0,0,0,0.45);
+
+    backdrop-filter:
+        blur(18px);
+
+    -webkit-backdrop-filter:
+        blur(18px);
+
+    text-align: center;
+}
+
+
+/* =========================================================
+   LOGO
+   ========================================================= */
+
+.logo {
+
+    font-size: clamp(
+        30px,
+        8vw,
+        48px
+    );
+
+    font-weight: 900;
+
+    letter-spacing: -1.5px;
+
+    line-height: 1;
+}
+
+
+.subtitle {
+
+    margin-top: 8px;
+
+    margin-bottom: 32px;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    letter-spacing: 3px;
+
+    color:
+        rgba(255,255,255,0.55);
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+button {
+
+    font-family: inherit;
+
+    border: none;
+
+    cursor: pointer;
+
+    touch-action: manipulation;
+
+    -webkit-user-select: none;
+
+    transition:
+        transform 0.12s ease,
+        opacity 0.12s ease;
+}
+
+
+button:active {
+
+    transform:
+        scale(0.96);
+}
+
+
+.main-button {
+
+    width: 100%;
+
+    min-height: 56px;
+
+    border-radius: 15px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #31c86b,
+            #159447
+        );
+
+    color: white;
+
+    font-size: 16px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.4px;
+
+    box-shadow:
+        0 8px 25px
+        rgba(24,170,82,0.25);
+}
+
+
+.secondary-button {
+
+    width: 100%;
+
+    min-height: 52px;
+
+    margin-top: 12px;
+
+    border-radius: 15px;
+
+    background:
+        rgba(255,255,255,0.08);
+
+    border:
+        1px solid
+        rgba(255,255,255,0.10);
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: 700;
+}
+
+
+.main-button:hover,
+.secondary-button:hover {
+
+    opacity: 0.9;
+}
+
+
+/* =========================================================
+   SETTINGS
+   ========================================================= */
+
+.menu-card h1 {
+
+    margin-top: 0;
+
+    margin-bottom: 25px;
+
+    font-size: 27px;
+
+    font-weight: 900;
+}
+
+
+.setting-row {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    padding: 16px 0;
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,0.08);
+
+    text-align: left;
+}
+
+
+.setting-row strong {
+
+    display: block;
+
+    font-size: 15px;
+}
+
+
+.setting-row small {
+
+    display: block;
+
+    margin-top: 4px;
+
+    max-width: 230px;
+
+    color:
+        rgba(255,255,255,0.45);
+
+    font-size: 11px;
+
+    line-height: 1.35;
+}
+
+
+/* =========================================================
+   TOGGLE BUTTON
+   ========================================================= */
+
+.toggle-button {
+
+    min-width: 62px;
+
+    height: 36px;
+
+    border-radius: 20px;
+
+    background:
+        #24ad5b;
+
+    color: white;
+
+    font-size: 12px;
+
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   COUNTERS
+   ========================================================= */
+
+.counter {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+}
+
+
+.counter button {
+
+    width: 34px;
+
+    height: 34px;
+
+    border-radius: 10px;
+
+    background:
+        rgba(255,255,255,0.10);
+
+    color: white;
+
+    font-size: 22px;
+
+    line-height: 1;
+}
+
+
+.counter span {
+
+    min-width: 24px;
+
+    text-align: center;
+
+    font-size: 16px;
+
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   GAME HUD
+   ========================================================= */
+
+.hud {
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+
+    padding:
+        max(14px, env(safe-area-inset-top))
+        18px
+        0;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    text-align: center;
+}
+
+
+.scenario {
+
+    display: inline-block;
+
+    padding: 7px 13px;
+
+    border-radius: 20px;
+
+    background:
+        rgba(0,0,0,0.42);
+
+    border:
+        1px solid
+        rgba(255,255,255,0.12);
+
+    backdrop-filter:
+        blur(10px);
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.5px;
+}
+
+
+.instruction {
+
+    margin-top: 9px;
+
+    font-size: 13px;
+
+    font-weight: 800;
+
+    text-shadow:
+        0 2px 8px
+        rgba(0,0,0,0.8);
+}
+
+
+/* =========================================================
+   RESULT SCREEN
+   ========================================================= */
+
+.result-card {
+
+    padding-top: 28px;
+}
+
+
+.result-title {
+
+    font-size: 22px;
+
+    font-weight: 900;
+
+    margin-bottom: 20px;
+}
+
+
+/* =========================================================
+   SCORE CIRCLE
+   ========================================================= */
+
+.score-circle {
+
+    width: 145px;
+
+    height: 145px;
+
+    margin:
+        0 auto 25px;
+
+    border-radius: 50%;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    flex-direction: column;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(47,197,105,0.25),
+            rgba(47,197,105,0.05)
+        );
+
+    border:
+        4px solid
+        #2acb69;
+
+    box-shadow:
+        0 0 35px
+        rgba(42,203,105,0.18);
+}
+
+
+.score-circle span {
+
+    font-size: 48px;
+
+    font-weight: 900;
+
+    line-height: 1;
+}
+
+
+.score-circle small {
+
+    margin-top: 4px;
+
+    color:
+        rgba(255,255,255,0.45);
+
+    font-size: 12px;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   SCORE LIST
+   ========================================================= */
+
+.score-list {
+
+    border-radius: 15px;
+
+    overflow: hidden;
+
+    background:
+        rgba(255,255,255,0.045);
+}
+
+
+.score-row {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 13px 15px;
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,0.06);
+}
+
+
+.score-row:last-child {
+
+    border-bottom: none;
+}
+
+
+.score-row span {
+
+    color:
+        rgba(255,255,255,0.55);
+
+    font-size: 13px;
+}
+
+
+.score-row strong {
+
+    font-size: 15px;
+}
+
+
+/* =========================================================
+   ANALYSIS
+   ========================================================= */
+
+.analysis {
+
+    margin-top: 18px;
+
+    padding: 14px;
+
+    border-radius: 13px;
+
+    background:
+        rgba(255,255,255,0.05);
+
+    color:
+        rgba(255,255,255,0.70);
+
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   MOBILE OPTIMISATION
+   ========================================================= */
+
+@media (
+    max-width: 500px
+) {
+
+    .menu-card,
+    .result-card {
+
+        padding:
+            26px 20px;
+
+        border-radius: 21px;
+    }
+
+
+    .setting-row {
+
+        padding:
+            14px 0;
+    }
+
+
+    .logo {
+
+        font-size: 36px;
+    }
+}
+
+
+/* =========================================================
+   IPAD / LANDSCAPE
+   ========================================================= */
+
+@media (
+    orientation: landscape
+) {
+
+    .menu-card {
+
+        max-height: 90vh;
+
+        overflow-y: auto;
+    }
+
+
+    .result-card {
+
+        max-height: 90vh;
+
+        overflow-y: auto;
+    }
+}
