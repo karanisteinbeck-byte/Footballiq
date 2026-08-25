@@ -1,57 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
 
     <meta
         name="viewport"
-        content="width=device-width,
-                 initial-scale=1.0,
-                 maximum-scale=1.0,
-                 user-scalable=no"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     >
 
-    <title>Football IQ Trainer</title>
+    <meta name="theme-color" content="#071a12">
+
+    <title>Football IQ</title>
 
     <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- App icon -->
     <link
-        rel="manifest"
-        href="manifest.json"
+        rel="apple-touch-icon"
+        href="icon-192.png"
     >
 
-    <meta
-        name="theme-color"
-        content="#071b12"
-    >
-
-    <!-- iPad / iOS PWA -->
-    <meta
-        name="apple-mobile-web-app-capable"
-        content="yes"
-    >
-
-    <meta
-        name="apple-mobile-web-app-status-bar-style"
-        content="black-translucent"
-    >
-
-    <meta
-        name="apple-mobile-web-app-title"
-        content="Football IQ"
-    >
-
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
-
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
 </head>
 
-
 <body>
-
 
     <!-- =====================================================
          GAME CANVAS
@@ -64,35 +38,21 @@
          START SCREEN
          ===================================================== -->
 
-    <div
-        id="startScreen"
-        class="screen"
-    >
+    <div id="startScreen" class="screen">
 
         <div class="menu-card">
 
-            <div class="logo">
-                FOOTBALL IQ
-            </div>
+            <h1>FOOTBALL IQ</h1>
 
-            <div class="subtitle">
-                DECISION TRAINER
-            </div>
+            <p class="subtitle">
+                Train your football intelligence
+            </p>
 
-
-            <button
-                id="startButton"
-                class="main-button"
-                onclick="alert('BUTTON WORKS')"
-            >
+            <button id="startButton" class="menu-button">
                 START TRAINING
             </button>
 
-
-            <button
-                id="settingsButton"
-                class="secondary-button"
-            >
+            <button id="settingsButton" class="menu-button secondary">
                 SETTINGS
             </button>
 
@@ -105,155 +65,63 @@
          SETTINGS SCREEN
          ===================================================== -->
 
-    <div
-        id="settingsScreen"
-        class="screen hidden"
-    >
+    <div id="settingsScreen" class="screen hidden">
 
         <div class="menu-card">
 
-            <h1>
-                SETTINGS
-            </h1>
+            <h2>SETTINGS</h2>
 
-
-            <!-- OFFSIDES -->
 
             <div class="setting-row">
 
-                <div>
+                <span>Offside</span>
 
-                    <strong>
-                        Offsides
-                    </strong>
-
-                    <small>
-                        Enable offside decisions
-                    </small>
-
-                </div>
-
-
-                <button
-                    id="offsideButton"
-                    class="toggle-button"
-                >
+                <button id="offsideButton" class="setting-button">
                     ON
                 </button>
 
             </div>
 
 
-            <!-- OFFSIDE RINGS -->
-
             <div class="setting-row">
 
-                <div>
+                <span>Offside Rings</span>
 
-                    <strong>
-                        Offside Rings
-                    </strong>
-
-                    <small>
-                        Show orange ring around
-                        offside teammates
-                    </small>
-
-                </div>
-
-
-                <button
-                    id="ringsButton"
-                    class="toggle-button"
-                >
+                <button id="ringsButton" class="setting-button">
                     ON
                 </button>
 
             </div>
 
 
-            <!-- TEAMMATES -->
-
             <div class="setting-row">
 
-                <div>
-
-                    <strong>
-                        Teammates
-                    </strong>
-
-                    <small>
-                        Number of passing options
-                    </small>
-
-                </div>
-
+                <span>Teammates</span>
 
                 <div class="counter">
 
-                    <button
-                        id="teamMinus"
-                    >
-                        −
-                    </button>
+                    <button id="teamMinus">−</button>
 
+                    <span id="teamCount">6</span>
 
-                    <span
-                        id="teamCount"
-                    >
-                        6
-                    </span>
-
-
-                    <button
-                        id="teamPlus"
-                    >
-                        +
-                    </button>
+                    <button id="teamPlus">+</button>
 
                 </div>
 
             </div>
 
 
-            <!-- OPPONENTS -->
-
             <div class="setting-row">
 
-                <div>
-
-                    <strong>
-                        Opponents
-                    </strong>
-
-                    <small>
-                        Number of defenders
-                    </small>
-
-                </div>
-
+                <span>Opponents</span>
 
                 <div class="counter">
 
-                    <button
-                        id="opponentMinus"
-                    >
-                        −
-                    </button>
+                    <button id="opponentMinus">−</button>
 
+                    <span id="opponentCount">7</span>
 
-                    <span
-                        id="opponentCount"
-                    >
-                        7
-                    </span>
-
-
-                    <button
-                        id="opponentPlus"
-                    >
-                        +
-                    </button>
+                    <button id="opponentPlus">+</button>
 
                 </div>
 
@@ -262,7 +130,7 @@
 
             <button
                 id="settingsBack"
-                class="secondary-button"
+                class="menu-button secondary"
             >
                 BACK
             </button>
@@ -273,26 +141,16 @@
 
 
     <!-- =====================================================
-         IN-GAME HUD
+         GAME HUD
          ===================================================== -->
 
-    <div
-        id="gameHUD"
-        class="hud"
-    >
+    <div id="gameHUD">
 
-        <div
-            id="scenarioNumber"
-            class="scenario"
-        >
+        <div id="scenarioNumber">
             SCENARIO 1
         </div>
 
-
-        <div
-            id="instruction"
-            class="instruction"
-        >
+        <div id="instruction">
             TAP A TEAMMATE TO PASS
         </div>
 
@@ -303,96 +161,69 @@
          RESULT SCREEN
          ===================================================== -->
 
-    <div
-        id="resultScreen"
-        class="screen hidden"
-    >
+    <div id="resultScreen" class="screen hidden">
 
-        <div class="result-card">
+        <div class="menu-card result-card">
 
-            <div
-                id="resultMessage"
-                class="result-title"
-            >
-                GOOD DECISION
+            <h2 id="resultMessage">
+                RESULT
+            </h2>
+
+
+            <div class="overall-container">
+
+                <div class="overall-label">
+                    SCORE
+                </div>
+
+                <div id="overallScore">
+                    0
+                </div>
+
             </div>
 
 
-            <div class="score-circle">
+            <div class="score-row">
 
-                <span
-                    id="overallScore"
-                >
+                <span>Decision</span>
+
+                <span id="decisionScore">
                     0
                 </span>
 
-                <small>
-                    / 100
-                </small>
+            </div>
+
+
+            <div class="score-row">
+
+                <span>Timing</span>
+
+                <span id="timingScore">
+                    0
+                </span>
 
             </div>
 
 
-            <div class="score-list">
+            <div class="score-row">
 
-                <div class="score-row">
+                <span>Reaction Time</span>
 
-                    <span>
-                        Decision
-                    </span>
-
-                    <strong
-                        id="decisionScore"
-                    >
-                        0
-                    </strong>
-
-                </div>
-
-
-                <div class="score-row">
-
-                    <span>
-                        Reaction
-                    </span>
-
-                    <strong
-                        id="timingScore"
-                    >
-                        0
-                    </strong>
-
-                </div>
-
-
-                <div class="score-row">
-
-                    <span>
-                        Time
-                    </span>
-
-                    <strong
-                        id="decisionTime"
-                    >
-                        0.00s
-                    </strong>
-
-                </div>
+                <span id="decisionTime">
+                    0.00s
+                </span>
 
             </div>
 
 
-            <div
-                id="analysis"
-                class="analysis"
-            >
+            <p id="analysis">
                 Analysis
-            </div>
+            </p>
 
 
             <button
                 id="nextButton"
-                class="main-button"
+                class="menu-button"
             >
                 NEXT SCENARIO
             </button>
@@ -403,62 +234,33 @@
 
 
     <!-- =====================================================
-         GAME 
-    ===================================================== -->
-
-<script src="./game.js"></script>
-
-</body>
-</html>
-}
-</script>
-
-</body>
-</html>
-
-
-    <!-- =====================================================
          SERVICE WORKER
          ===================================================== -->
 
     <script>
-
         if ("serviceWorker" in navigator) {
-
-            window.addEventListener(
-                "load",
-                () => {
-
-                    navigator.serviceWorker
-                        .register("./sw.js")
-                        .then(
-                            registration => {
-
-                                console.log(
-                                    "Football IQ service worker registered:",
-                                    registration.scope
-                                );
-
-                            }
-                        )
-                        .catch(
-                            error => {
-
-                                console.error(
-                                    "Service worker registration failed:",
-                                    error
-                                );
-
-                            }
+            window.addEventListener("load", function () {
+                navigator.serviceWorker.register("sw.js")
+                    .then(function () {
+                        console.log("Service worker registered");
+                    })
+                    .catch(function (error) {
+                        console.log(
+                            "Service worker registration failed:",
+                            error
                         );
-
-                }
-            );
-
+                    });
+            });
         }
-
     </script>
 
-</body>
 
+    <!-- =====================================================
+         GAME JAVASCRIPT
+         IMPORTANT: THIS IS THE ONLY GAME.JS SCRIPT
+         ===================================================== -->
+
+    <script src="game.js"></script>
+
+</body>
 </html>
