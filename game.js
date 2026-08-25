@@ -1,5 +1,4 @@
 
-alert("GAME.JS IS LOADED");
 // =========================================================
 
 // FOOTBALL IQ TRAINER
