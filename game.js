@@ -1,532 +1,3 @@
-
-// =========================================================
-
-// FOOTBALL IQ TRAINER
-// Game engine
-// =========================================================
-
-
-// =========================================================
-// 1. CANVAS SETUP
-// =========================================================
-
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-
-// =========================================================
-// 2. GAME SETTINGS
-// =========================================================
-
-const settings = {
-    offside: true,
-    teammates: 6,
-    opponents: 7,
-    offsideRings: true
-};
-
-
-// =========================================================
-// 3. GAME STATE
-// =========================================================
-
-let gameState = "menu";
-
-let scenarioNumber = 1;
-
-let teammates = [];
-let opponents = [];
-
-let player = null;
-let ball = null;
-
-let decisionStartTime = 0;
-
-let selectedPlayer = null;
-
-let scenarioActive = false;
-
-
-// =========================================================
-// 4. CANVAS RESIZING
-// =========================================================
-
-function resizeCanvas() {
-
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width =
-        window.innerWidth * dpr;
-
-    canvas.height =
-        window.innerHeight * dpr;
-
-    canvas.style.width =
-        window.innerWidth + "px";
-
-    canvas.style.height =
-        window.innerHeight + "px";
-
-    ctx.setTransform(
-        dpr,
-        0,
-        0,
-        dpr,
-        0,
-        0
-    );
-}
-
-
-window.addEventListener(
-    "resize",
-    resizeCanvas
-);
-
-resizeCanvas();
-
-// =========================================================
-// 5. 3D PERSPECTIVE
-// =========================================================
-
-// The virtual football pitch.
-// x = left/right
-// y = distance up the pitch
-const pitch = {
-    width: 105,
-    length: 68
-};
-
-
-// Camera position.
-// The player is looking forward from this point.
-const camera = {
-    x: 0,
-    y: 0,
-    height: 1.7
-};
-
-
-// How wide the player's view is.
-const FOV = 90;
-
-
-// Converts a real pitch position into a screen position.
-function project3D(x, y, z = 0) {
-
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
-
-    // Position relative to the camera
-    const relativeX = x - camera.x;
-    const relativeY = y - camera.y;
-
-    // Prevent objects from being drawn behind the camera
-    if (relativeY <= 0.5) {
-        return null;
-    }
-
-    // Perspective scale.
-    // Farther objects become smaller.
-    const scale =
-        (screenHeight * 0.85) /
-        relativeY;
-
-    // Convert pitch coordinates to screen coordinates
-    const screenX =
-        screenWidth / 2 +
-        relativeX * scale;
-
-    const horizon =
-        screenHeight * 0.30;
-
-    const screenY =
-        horizon +
-        (camera.height - z) *
-        scale;
-
-    return {
-        x: screenX,
-        y: screenY,
-        scale: scale
-    };
-}
-
-// =========================================================
-// 6. PITCH DRAWING
-// =========================================================
-
-function drawPitch() {
-
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    // -------------------------
-    // Sky / stadium background
-    // -------------------------
-
-    const skyGradient =
-        ctx.createLinearGradient(
-            0,
-            0,
-            0,
-            h * 0.55
-        );
-
-    skyGradient.addColorStop(
-        0,
-        "#75b9df"
-    );
-
-    skyGradient.addColorStop(
-        1,
-        "#c7e4ee"
-    );
-
-    ctx.fillStyle = skyGradient;
-
-    ctx.fillRect(
-        0,
-        0,
-        w,
-        h * 0.55
-    );
-
-
-    // -------------------------
-    // Stadium
-    // -------------------------
-
-    ctx.fillStyle = "#454b50";
-
-    ctx.fillRect(
-        0,
-        h * 0.25,
-        w,
-        h * 0.30
-    );
-
-
-    // -------------------------
-    // Pitch
-    // -------------------------
-
-    const horizonY = h * 0.30;
-
-    const bottomY = h;
-
-    const topWidth = w * 0.18;
-
-    const bottomWidth = w * 1.35;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w / 2 - topWidth / 2,
-        horizonY
-    );
-
-    ctx.lineTo(
-        w / 2 + topWidth / 2,
-        horizonY
-    );
-
-    ctx.lineTo(
-        w / 2 + bottomWidth / 2,
-        bottomY
-    );
-
-    ctx.lineTo(
-        w / 2 - bottomWidth / 2,
-        bottomY
-    );
-
-    ctx.closePath();
-
-    const grassGradient =
-        ctx.createLinearGradient(
-            0,
-            horizonY,
-            0,
-            bottomY
-        );
-
-    grassGradient.addColorStop(
-        0,
-        "#267b43"
-    );
-
-    grassGradient.addColorStop(
-        0.5,
-        "#218143"
-    );
-
-    grassGradient.addColorStop(
-        1,
-        "#176735"
-    );
-
-    ctx.fillStyle = grassGradient;
-
-    ctx.fill();
-
-
-    // -------------------------
-    // Pitch mowing stripes
-    // -------------------------
-
-    for (let i = 0; i < 12; i++) {
-
-        const y1 =
-            horizonY +
-            (bottomY - horizonY) *
-            (i / 12);
-
-        const y2 =
-            horizonY +
-            (bottomY - horizonY) *
-            ((i + 1) / 12);
-
-        const width1 =
-            topWidth +
-            (bottomWidth - topWidth) *
-            (i / 12);
-
-        const width2 =
-            topWidth +
-            (bottomWidth - topWidth) *
-            ((i + 1) / 12);
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            w / 2 - width1 / 2,
-            y1
-        );
-
-        ctx.lineTo(
-            w / 2 + width1 / 2,
-            y1
-        );
-
-        ctx.lineTo(
-            w / 2 + width2 / 2,
-            y2
-        );
-
-        ctx.lineTo(
-            w / 2 - width2 / 2,
-            y2
-        );
-
-        ctx.closePath();
-
-        if (i % 2 === 0) {
-            ctx.fillStyle =
-                "rgba(255,255,255,0.025)";
-
-            ctx.fill();
-        }
-    }
-
-
-    // -------------------------
-    // Pitch sidelines
-    // -------------------------
-
-    ctx.strokeStyle =
-        "rgba(255,255,255,0.9)";
-
-    ctx.lineWidth = 3;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w / 2 - topWidth / 2,
-        horizonY
-    );
-
-    ctx.lineTo(
-        w / 2 - bottomWidth / 2,
-        bottomY
-    );
-
-    ctx.moveTo(
-        w / 2 + topWidth / 2,
-        horizonY
-    );
-
-    ctx.lineTo(
-        w / 2 + bottomWidth / 2,
-        bottomY
-    );
-
-    ctx.stroke();
-
-
-    // -------------------------
-    // Perspective pitch lines
-    // -------------------------
-
-    drawPitchLine(
-        0.18,
-        "Penalty area"
-    );
-
-    drawPitchLine(
-        0.42,
-        "Midfield"
-    );
-
-    drawPitchLine(
-        0.68,
-        "Attacking area"
-    );
-
-
-    // -------------------------
-    // Centre line
-    // -------------------------
-
-    drawHorizontalPitchLine(
-        0.42
-    );
-}
-
-
-// =========================================================
-// PERSPECTIVE LINE
-// =========================================================
-
-function drawPitchLine(position) {
-
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    const horizonY =
-        h * 0.30;
-
-    const bottomY =
-        h;
-
-    const topWidth =
-        w * 0.18;
-
-    const bottomWidth =
-        w * 1.35;
-
-    const y =
-        horizonY +
-        (bottomY - horizonY) *
-        position;
-
-    const width =
-        topWidth +
-        (bottomWidth - topWidth) *
-        position;
-
-    ctx.strokeStyle =
-        "rgba(255,255,255,0.85)";
-
-    ctx.lineWidth = 2;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w / 2 - width / 2,
-        y
-    );
-
-    ctx.lineTo(
-        w / 2 + width / 2,
-        y
-    );
-
-    ctx.stroke();
-}
-
-
-// =========================================================
-// HORIZONTAL PITCH LINE
-// =========================================================
-
-function drawHorizontalPitchLine(position) {
-
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    const horizonY =
-        h * 0.30;
-
-    const bottomY =
-        h;
-
-    const topWidth =
-        w * 0.18;
-
-    const bottomWidth =
-        w * 1.35;
-
-    const y =
-        horizonY +
-        (bottomY - horizonY) *
-        position;
-
-    const width =
-        topWidth +
-        (bottomWidth - topWidth) *
-        position;
-
-    ctx.strokeStyle =
-        "rgba(255,255,255,0.85)";
-
-    ctx.lineWidth = 2;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w / 2 - width / 2,
-        y
-    );
-
-    ctx.lineTo(
-        w / 2 + width / 2,
-        y
-    );
-
-    ctx.stroke();
-}
-
-// =========================================================
-// 7. PLAYER CREATION
-// =========================================================
-
-function createPlayer(x, y, team, number) {
-
-    return {
-        x: x,
-        y: y,
-
-        // Height in our virtual world
-        z: 0,
-
-        team: team,
-        number: number,
-
-        // Used for drawing
-        radius: 0.8,
-
-        // Used for AI / pressure calculations later
-        speed: 1,
-
-        // Whether this player is currently selectable
-        selectable: team === "blue",
-
-        // Offside status
-        offside: false
-    };
-}
-
 // ============================================================
 // FOOTBALL IQ TRAINER
 // Complete game.js
@@ -603,6 +74,7 @@ function resizeCanvas() {
         0
     );
 }
+
 
 window.addEventListener(
     "resize",
@@ -1062,11 +534,6 @@ function generateTeammates() {
 
             attempts++;
 
-            /*
-             * Keep teammates inside
-             * the visible playing area.
-             */
-
             x = randomRange(-24, 24);
 
             y = randomRange(10, 58);
@@ -1156,8 +623,6 @@ function generateOpponents() {
                 Math.random();
 
 
-            // PRESSURE PLAYERS
-
             if (type < 0.35) {
 
                 x =
@@ -1171,12 +636,8 @@ function generateOpponents() {
                         8,
                         24
                     );
-            }
 
-
-            // DEFENSIVE LINE
-
-            else if (type < 0.75) {
+            } else if (type < 0.75) {
 
                 x =
                     randomRange(
@@ -1189,12 +650,8 @@ function generateOpponents() {
                         30,
                         48
                     );
-            }
 
-
-            // WIDE / COVERING PLAYERS
-
-            else {
+            } else {
 
                 x =
                     randomRange(
@@ -1311,14 +768,6 @@ function getSecondLastDefender() {
     }
 
 
-    /*
-     * Sort ALL defenders first.
-     *
-     * This fixes the previous bug where
-     * the first defender generated was
-     * incorrectly treated as the last defender.
-     */
-
     const sorted =
         [...opponents].sort(
             (a, b) =>
@@ -1369,19 +818,12 @@ function calculateOffside() {
         of teammates
     ) {
 
-        /*
-         * In this game increasing Y means
-         * moving towards the opponent goal.
-         */
-
         const aheadOfBall =
             teammate.y > ball.y;
-
 
         const beyondDefender =
             teammate.y >
             secondLast.y;
-
 
         teammate.offside =
             aheadOfBall &&
@@ -1513,8 +955,6 @@ function drawPlayer(p) {
             5 * scale
         );
 
-
-    // SHADOW
 
     drawPlayerShadow(
         p,
@@ -1690,8 +1130,6 @@ function drawBall() {
         );
 
 
-    // BALL SHADOW
-
     ctx.beginPath();
 
     ctx.ellipse(
@@ -1710,8 +1148,6 @@ function drawBall() {
 
     ctx.fill();
 
-
-    // BALL
 
     ctx.beginPath();
 
@@ -1754,10 +1190,6 @@ function drawPlayers() {
         ...teammates
     ];
 
-
-    /*
-     * Draw distant players first.
-     */
 
     allPlayers.sort(
         (a, b) =>
@@ -1895,8 +1327,6 @@ function calculatePassQuality(target) {
         );
 
 
-    // DISTANCE
-
     if (distance > 35) {
 
         score -= 15;
@@ -1906,8 +1336,6 @@ function calculatePassQuality(target) {
         score -= 8;
     }
 
-
-    // CLOSEST OPPONENT
 
     let closestOpponent =
         Infinity;
@@ -1936,8 +1364,6 @@ function calculatePassQuality(target) {
     }
 
 
-    // PRESSURE
-
     if (
         closestOpponent < 5
     ) {
@@ -1957,8 +1383,6 @@ function calculatePassQuality(target) {
         score -= 8;
     }
 
-
-    // OFFSIDE
 
     if (
         settings.offside &&
@@ -2713,9 +2137,11 @@ function gameLoop() {
 
 
 // ============================================================
-// 36. START GAME
+// 36. START GAME LOOP
 // ============================================================
 
 gameLoop();
 
-console.log("FOOTBALL IQ GAME.JS LOADED");
+console.log(
+    "FOOTBALL IQ GAME.JS LOADED"
+);
