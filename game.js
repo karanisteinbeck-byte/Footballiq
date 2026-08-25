@@ -53,66 +53,8 @@ let scenarioActive = false;
 
 function resizeCanvas() {
 
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width =
-        window.innerWidth * dpr;
-
-    canvas.height =
-        window.innerHeight * dpr;
-
-    canvas.style.width =
-        window.innerWidth + "px";
-
-    canvas.style.height =
-        window.innerHeight + "px";
-
-    ctx.setTransform(
-        dpr,
-        0,
-        0,
-        dpr,
-        0,
-        0
-    );
-}
-
-
-window.addEventListener(
-    "resize",
-    resizeCanvas
-);
-
-resizeCanvas();
-
-// =========================================================
-// 5. 3D PERSPECTIVE
-// =========================================================
-
-// The virtual football pitch.
-// x = left/right
-// y = distance up the pitch
-const pitch = {
-    width: 105,
-    length: 68
-};
-
-
-// Camera position.
-// The player is looking forward from this point.
-const camera = {
-    x: 0,
-    y: 0,
-    height: 1.7
-};
-
-
-// How wide the player's view is.
-const FOV = 90;
-
-
-// Converts a real pitch position into a screen position.
-function project3D(x, y, z = 0) {
+    const 
+        function project3D(x, y, z = 0) {
 
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
