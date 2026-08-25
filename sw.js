@@ -1,4 +1,4 @@
-const CACHE_NAME = "football-iq-v1";
+const CACHE_NAME = "football-iq-v2";
 
 const FILES = [
     "./",
