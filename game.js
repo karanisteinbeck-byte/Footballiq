@@ -1,22 +1,22 @@
 // ============================================================
-// FOOTBALL IQ TRAINER — CLEAN GAME.JS
+// FOOTBALL IQ TRAINER — FIRST PERSON GAME
 // ============================================================
 
-document.addEventListener("DOMContentLoaded", () => {
+"use strict";
 
-    // ========================================================
-    // CANVAS
-    // ========================================================
+console.log("NEW GAME.JS LOADED");
 
-    const canvas = document.getElementById("gameCanvas");
+// ============================================================
+// CANVAS
+// ============================================================
 
-    if (!canvas) {
-        console.error("gameCanvas not found");
-        return;
-    }
+const canvas = document.getElementById("gameCanvas");
+
+if (!canvas) {
+    console.error("gameCanvas was not found.");
+} else {
 
     const ctx = canvas.getContext("2d");
-
 
     // ========================================================
     // SETTINGS
@@ -28,7 +28,6 @@ document.addEventListener("DOMContentLoaded", () => {
         opponents: 7,
         offsideRings: true
     };
-
 
     // ========================================================
     // GAME STATE
@@ -43,12 +42,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let player = null;
     let ball = null;
 
-    let scenarioActive = false;
     let decisionStartTime = 0;
-
+    let scenarioActive = false;
 
     // ========================================================
-    // CANVAS SIZE
+    // CANVAS RESIZE
     // ========================================================
 
     function resizeCanvas() {
@@ -58,89 +56,75 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.width = window.innerWidth * dpr;
         canvas.height = window.innerHeight * dpr;
 
-        canvas.style.width =
-            window.innerWidth + "px";
+        canvas.style.width = window.innerWidth + "px";
+        canvas.style.height = window.innerHeight + "px";
 
-        canvas.style.height =
-            window.innerHeight + "px";
-
-        ctx.setTransform(
-            dpr,
-            0,
-            0,
-            dpr,
-            0,
-            0
-        );
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    window.addEventListener(
-        "resize",
-        resizeCanvas
-    );
+    window.addEventListener("resize", resizeCanvas);
 
     resizeCanvas();
 
-
     // ========================================================
-    // PITCH
-    // ========================================================
-
-    const pitch = {
-        width: 68,
-        length: 105
-    };
-
-
-    // ========================================================
-    // CAMERA
+    // FIRST PERSON CAMERA
     // ========================================================
 
     const camera = {
         x: 0,
-        y: 0
+        y: 0,
+        z: 1.7
     };
 
+    /*
+        The important change:
 
-    // ========================================================
-    // 3D PROJECTION
-    // ========================================================
+        The player is standing on the pitch.
+        Everything is positioned relative to the player.
 
-    function project3D(x, y) {
+        +Y = forward
+        -Y = behind the player
+        X  = left/right
+    */
 
-        const w = window.innerWidth;
-        const h = window.innerHeight;
+    const FOV = 75;
+
+    function project(x, y, z = 0) {
 
         const relativeX = x - camera.x;
         const relativeY = y - camera.y;
 
-        if (relativeY < 1) {
+        if (relativeY <= 0.8) {
             return null;
         }
 
-        const horizon = h * 0.25;
+        const focalLength =
+            (window.innerWidth / 2) /
+            Math.tan((FOV * Math.PI / 180) / 2);
 
-        const perspective =
-            850 / relativeY;
+        const scale =
+            focalLength / relativeY;
 
         const screenX =
-            w / 2 +
-            relativeX * perspective;
+            window.innerWidth / 2 +
+            relativeX * scale;
+
+        const horizon =
+            window.innerHeight * 0.43;
 
         const screenY =
             horizon +
-            perspective * 35;
+            (camera.z - z) * scale;
 
         return {
             x: screenX,
             y: screenY,
-            scale: perspective
+            scale: scale
         };
     }
 
-
     // ========================================================
-    // PITCH DRAWING
+    // PITCH
     // ========================================================
 
     function drawPitch() {
@@ -148,103 +132,111 @@ document.addEventListener("DOMContentLoaded", () => {
         const w = window.innerWidth;
         const h = window.innerHeight;
 
-        // Sky
-        ctx.fillStyle = "#79b9dc";
-        ctx.fillRect(
+        const horizon = h * 0.43;
+
+        // SKY
+
+        const sky = ctx.createLinearGradient(
             0,
             0,
-            w,
-            h
+            0,
+            horizon
         );
 
+        sky.addColorStop(0, "#70b7df");
+        sky.addColorStop(1, "#d4edf5");
 
-        // Stadium
-        ctx.fillStyle = "#41464a";
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, w, horizon);
+
+        // STADIUM
+
+        ctx.fillStyle = "#444a50";
 
         ctx.fillRect(
             0,
-            h * 0.20,
+            horizon,
             w,
-            h * 0.28
+            h * 0.18
         );
 
+        // STANDS
 
-        // Pitch
+        for (let i = 0; i < 18; i++) {
 
-        const horizonY = h * 0.25;
+            const x = i * w / 18;
 
-        const bottomY = h;
+            ctx.fillStyle =
+                i % 2 === 0
+                    ? "#555b60"
+                    : "#484e53";
 
-        const topWidth = w * 0.28;
+            ctx.fillRect(
+                x,
+                horizon + 10,
+                w / 19,
+                h * 0.12
+            );
+        }
 
-        const bottomWidth = w * 1.6;
+        // PITCH
 
+        const topWidth = w * 0.15;
+        const bottomWidth = w * 1.45;
 
         ctx.beginPath();
 
         ctx.moveTo(
             w / 2 - topWidth / 2,
-            horizonY
+            horizon
         );
 
         ctx.lineTo(
             w / 2 + topWidth / 2,
-            horizonY
+            horizon
         );
 
         ctx.lineTo(
             w / 2 + bottomWidth / 2,
-            bottomY
+            h
         );
 
         ctx.lineTo(
             w / 2 - bottomWidth / 2,
-            bottomY
+            h
         );
 
         ctx.closePath();
 
-
-        const grass =
-            ctx.createLinearGradient(
-                0,
-                horizonY,
-                0,
-                bottomY
-            );
-
-        grass.addColorStop(
+        const grass = ctx.createLinearGradient(
             0,
-            "#2b8546"
+            horizon,
+            0,
+            h
         );
 
-        grass.addColorStop(
-            1,
-            "#176633"
-        );
+        grass.addColorStop(0, "#2b8147");
+        grass.addColorStop(1, "#145d30");
 
         ctx.fillStyle = grass;
-
         ctx.fill();
 
+        // GRASS STRIPES
 
-        // Pitch stripes
-
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 14; i++) {
 
             if (i % 2 !== 0) continue;
 
-            const p1 = i / 12;
-
-            const p2 = (i + 1) / 12;
+            const p1 = i / 14;
+            const p2 = (i + 1) / 14;
 
             const y1 =
-                horizonY +
-                (bottomY - horizonY) * p1;
+                horizon +
+                (h - horizon) * p1;
 
             const y2 =
-                horizonY +
-                (bottomY - horizonY) * p2;
+                horizon +
+                (h - horizon) * p2;
 
             const width1 =
                 topWidth +
@@ -253,7 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const width2 =
                 topWidth +
                 (bottomWidth - topWidth) * p2;
-
 
             ctx.beginPath();
 
@@ -285,76 +276,66 @@ document.addEventListener("DOMContentLoaded", () => {
             ctx.fill();
         }
 
-
-        // Pitch lines
-
-        drawPitchLine(0.22);
-
-        drawPitchLine(0.50);
-
-        drawPitchLine(0.76);
-
-
-        // Sidelines
+        // PERSPECTIVE SIDELINES
 
         ctx.strokeStyle = "white";
-
         ctx.lineWidth = 3;
 
         ctx.beginPath();
 
         ctx.moveTo(
             w / 2 - topWidth / 2,
-            horizonY
+            horizon
         );
 
         ctx.lineTo(
             w / 2 - bottomWidth / 2,
-            bottomY
+            h
         );
 
         ctx.moveTo(
             w / 2 + topWidth / 2,
-            horizonY
+            horizon
         );
 
         ctx.lineTo(
             w / 2 + bottomWidth / 2,
-            bottomY
+            h
         );
 
         ctx.stroke();
+
+        // FIELD LINES
+
+        drawFieldLine(0.25);
+        drawFieldLine(0.50);
+        drawFieldLine(0.75);
     }
 
+    // ========================================================
+    // FIELD LINE
+    // ========================================================
 
-    function drawPitchLine(position) {
+    function drawFieldLine(position) {
 
         const w = window.innerWidth;
         const h = window.innerHeight;
 
-        const horizonY = h * 0.25;
+        const horizon = h * 0.43;
 
-        const bottomY = h;
-
-        const topWidth = w * 0.28;
-
-        const bottomWidth = w * 1.6;
-
+        const topWidth = w * 0.15;
+        const bottomWidth = w * 1.45;
 
         const y =
-            horizonY +
-            (bottomY - horizonY) *
-            position;
-
+            horizon +
+            (h - horizon) * position;
 
         const width =
             topWidth +
-            (bottomWidth - topWidth) *
-            position;
-
+            (bottomWidth - topWidth) * position;
 
         ctx.strokeStyle =
-            "rgba(255,255,255,0.85)";
+            "rgba(255,255,255,0.8)";
 
         ctx.lineWidth = 2;
 
@@ -373,9 +354,8 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.stroke();
     }
 
-
     // ========================================================
-    // PLAYER
+    // PLAYER CREATION
     // ========================================================
 
     function createPlayer(
@@ -388,6 +368,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return {
             x,
             y,
+
+            z: 0,
+
             team,
             number,
 
@@ -395,10 +378,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             screenX: 0,
             screenY: 0,
-            hitRadius: 25
+            screenRadius: 0,
+
+            selectable:
+                team === "blue"
         };
     }
-
 
     // ========================================================
     // RANDOM
@@ -411,48 +396,62 @@ document.addEventListener("DOMContentLoaded", () => {
             min;
     }
 
-
-    // ========================================================
-    // DISTANCE
-    // ========================================================
-
-    function distance(a, b) {
-
-        const dx = a.x - b.x;
-
-        const dy = a.y - b.y;
-
-        return Math.sqrt(
-            dx * dx +
-            dy * dy
-        );
-    }
-
-
     // ========================================================
     // CREATE USER
     // ========================================================
 
-    function createUser() {
+    function createUserPlayer() {
 
         player = createPlayer(
             0,
-            8,
+            0,
             "blue",
             10
         );
 
         player.isUser = true;
+        player.selectable = false;
     }
 
+    // ========================================================
+    // CREATE BALL
+    // ========================================================
+
+    function createBall() {
+
+        ball = {
+            x: 0,
+            y: 5,
+            z: 0.18
+        };
+    }
 
     // ========================================================
-    // GENERATE TEAMMATES
+    // GENERATE REALISTIC SCENARIO
     // ========================================================
 
-    function generateTeammates() {
+    function generateScenario() {
 
         teammates = [];
+        opponents = [];
+
+        createUserPlayer();
+        createBall();
+
+        /*
+            Players are deliberately mixed together.
+
+            Everyone is placed between roughly
+            8 and 45 metres in front of the user.
+
+            This prevents the old problem where:
+              BLUE = one side
+              RED  = miles away
+        */
+
+        const positions = [];
+
+        // TEAMMATES
 
         for (
             let i = 0;
@@ -465,42 +464,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let valid = false;
 
-            let attempts = 0;
+            while (!valid) {
 
-
-            while (
-                !valid &&
-                attempts < 100
-            ) {
-
-                attempts++;
-
-                // Players are spread throughout
-                // the same area as opponents.
-
-                x = random(-25, 25);
-
-                y = random(15, 55);
+                x = random(-18, 18);
+                y = random(10, 42);
 
                 valid = true;
 
-
                 for (
-                    const p of teammates
+                    const p of positions
                 ) {
 
-                    if (
-                        Math.abs(x - p.x) < 5 &&
-                        Math.abs(y - p.y) < 5
-                    ) {
+                    const dx =
+                        x - p.x;
 
+                    const dy =
+                        y - p.y;
+
+                    const d =
+                        Math.sqrt(
+                            dx * dx +
+                            dy * dy
+                        );
+
+                    if (d < 5) {
                         valid = false;
-
                         break;
                     }
                 }
             }
 
+            positions.push({ x, y });
 
             teammates.push(
                 createPlayer(
@@ -511,16 +505,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 )
             );
         }
-    }
 
-
-    // ========================================================
-    // GENERATE OPPONENTS
-    // ========================================================
-
-    function generateOpponents() {
-
-        opponents = [];
+        // OPPONENTS
 
         for (
             let i = 0;
@@ -533,46 +519,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let valid = false;
 
-            let attempts = 0;
+            while (!valid) {
 
-
-            while (
-                !valid &&
-                attempts < 100
-            ) {
-
-                attempts++;
-
-                // IMPORTANT:
-                // Opponents are NOT put in a separate area.
-                // They are mixed with teammates.
-
-                x = random(-28, 28);
-
-                y = random(12, 58);
+                x = random(-20, 20);
+                y = random(12, 45);
 
                 valid = true;
 
-
-                // Don't put opponents directly
-                // on top of each other.
-
                 for (
-                    const p of opponents
+                    const p of positions
                 ) {
 
-                    if (
-                        Math.abs(x - p.x) < 4 &&
-                        Math.abs(y - p.y) < 4
-                    ) {
+                    const dx =
+                        x - p.x;
 
+                    const dy =
+                        y - p.y;
+
+                    const d =
+                        Math.sqrt(
+                            dx * dx +
+                            dy * dy
+                        );
+
+                    /*
+                        Opponents can be close,
+                        but not directly stacked
+                        on top of another player.
+                    */
+
+                    if (d < 4) {
                         valid = false;
-
                         break;
                     }
                 }
             }
 
+            positions.push({ x, y });
 
             opponents.push(
                 createPlayer(
@@ -583,21 +566,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 )
             );
         }
+
+        calculateOffside();
+
+        decisionStartTime =
+            performance.now();
+
+        scenarioActive = true;
     }
 
-
     // ========================================================
-    // BALL
+    // DISTANCE
     // ========================================================
 
-    function createBall() {
+    function distance(a, b) {
 
-        ball = {
-            x: 0,
-            y: 10
-        };
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+
+        return Math.sqrt(
+            dx * dx + dy * dy
+        );
     }
-
 
     // ========================================================
     // OFFSIDE
@@ -609,14 +599,19 @@ document.addEventListener("DOMContentLoaded", () => {
             p => p.offside = false
         );
 
-
         if (!settings.offside) {
             return;
         }
 
+        /*
+            The ball is at y = 5.
 
-        // Sort defenders by Y.
-        // Highest Y = furthest forward.
+            Defenders with the highest y
+            are farther forward.
+
+            Find the two defenders furthest
+            forward.
+        */
 
         const defenders =
             [...opponents].sort(
@@ -624,17 +619,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     b.y - a.y
             );
 
-
-        if (
-            defenders.length < 2
-        ) {
+        if (defenders.length < 2) {
             return;
         }
 
-
         const secondLast =
-            defenders[1];
-
+            defenders[1].y;
 
         for (
             const teammate
@@ -642,86 +632,18 @@ document.addEventListener("DOMContentLoaded", () => {
         ) {
 
             const beyondBall =
-                teammate.y > ball.y;
-
+                teammate.y >
+                ball.y;
 
             const beyondDefender =
                 teammate.y >
-                secondLast.y;
-
+                secondLast;
 
             teammate.offside =
                 beyondBall &&
                 beyondDefender;
         }
-
-
-        // ----------------------------------------------------
-        // GUARANTEE LEGAL OPTIONS
-        // ----------------------------------------------------
-
-        let legalPlayers =
-            teammates.filter(
-                p => !p.offside
-            );
-
-
-        // If random generation somehow makes
-        // everyone offside, move two players
-        // back into a legal position.
-
-        if (
-            legalPlayers.length < 2
-        ) {
-
-            const sorted =
-                [...teammates].sort(
-                    (a, b) =>
-                        a.y - b.y
-                );
-
-
-            sorted[0].y =
-                Math.min(
-                    sorted[0].y,
-                    ball.y - 2
-                );
-
-
-            sorted[1].y =
-                Math.min(
-                    sorted[1].y,
-                    ball.y - 1
-                );
-
-
-            calculateOffside();
-        }
     }
-
-
-    // ========================================================
-    // GENERATE SCENARIO
-    // ========================================================
-
-    function generateScenario() {
-
-        createUser();
-
-        createBall();
-
-        generateTeammates();
-
-        generateOpponents();
-
-        calculateOffside();
-
-        scenarioActive = true;
-
-        decisionStartTime =
-            performance.now();
-    }
-
 
     // ========================================================
     // DRAW PLAYER
@@ -730,53 +652,68 @@ document.addEventListener("DOMContentLoaded", () => {
     function drawPlayer(p) {
 
         const projected =
-            project3D(
+            project(
                 p.x,
-                p.y
+                p.y,
+                p.z
             );
-
 
         if (!projected) {
             return;
         }
 
+        /*
+            Players become smaller with distance,
+            but never become microscopic.
+        */
 
-        const scale =
+        const size =
             Math.max(
                 0.35,
                 Math.min(
                     projected.scale,
-                    3
+                    2.8
                 )
             );
 
+        const bodyHeight =
+            14 * size;
 
-        const x =
+        const bodyWidth =
+            7 * size;
+
+        p.screenX =
             projected.x;
 
-        const y =
+        p.screenY =
             projected.y;
 
-
-        const size =
+        p.screenRadius =
             Math.max(
-                12,
-                12 * scale
+                14,
+                7 * size
             );
 
+        // SHADOW
 
-        p.screenX = x;
+        ctx.beginPath();
 
-        p.screenY = y;
+        ctx.ellipse(
+            projected.x,
+            projected.y + 3,
+            bodyWidth * 1.1,
+            bodyWidth * 0.4,
+            0,
+            0,
+            Math.PI * 2
+        );
 
-        p.hitRadius =
-            Math.max(
-                25,
-                size * 1.8
-            );
+        ctx.fillStyle =
+            "rgba(0,0,0,0.3)";
 
+        ctx.fill();
 
-        // Offside ring
+        // OFFSIDE RING
 
         if (
             p.offside &&
@@ -786,96 +723,81 @@ document.addEventListener("DOMContentLoaded", () => {
             ctx.beginPath();
 
             ctx.arc(
-                x,
-                y,
-                size * 1.5,
+                projected.x,
+                projected.y,
+                Math.max(
+                    18,
+                    10 * size
+                ),
                 0,
                 Math.PI * 2
             );
 
             ctx.strokeStyle =
-                "#ff9d22";
+                "#ffae24";
 
             ctx.lineWidth = 3;
 
             ctx.stroke();
         }
 
+        // BODY
 
-        // ----------------------------------------------------
-        // OLD BLOCKY STYLE
-        // ----------------------------------------------------
-
-        const color =
+        ctx.fillStyle =
             p.team === "blue"
-                ? "#287cff"
-                : "#e83f3f";
-
-
-        // Body
-
-        ctx.fillStyle = color;
+                ? "#1976e8"
+                : "#e53935";
 
         ctx.fillRect(
-            x - size * 0.45,
-            y - size,
-            size * 0.9,
-            size * 1.15
+            projected.x -
+                bodyWidth / 2,
+            projected.y -
+                bodyHeight,
+            bodyWidth,
+            bodyHeight
         );
 
+        // HEAD
 
-        // Head
+        ctx.beginPath();
+
+        ctx.arc(
+            projected.x,
+            projected.y -
+                bodyHeight -
+                bodyWidth * 0.55,
+            bodyWidth * 0.55,
+            0,
+            Math.PI * 2
+        );
 
         ctx.fillStyle =
-            "#d69a72";
+            "#c98b62";
 
-        ctx.fillRect(
-            x - size * 0.35,
-            y - size * 1.55,
-            size * 0.7,
-            size * 0.55
-        );
+        ctx.fill();
 
+        // NUMBER
 
-        // Legs
+        if (size > 0.5) {
 
-        ctx.fillStyle =
-            "#222";
+            ctx.fillStyle = "white";
 
-        ctx.fillRect(
-            x - size * 0.35,
-            y + size * 0.1,
-            size * 0.25,
-            size * 0.65
-        );
+            ctx.font =
+                `bold ${Math.max(
+                    9,
+                    7 * size
+                )}px Arial`;
 
-        ctx.fillRect(
-            x + size * 0.10,
-            y + size * 0.1,
-            size * 0.25,
-            size * 0.65
-        );
+            ctx.textAlign = "center";
 
-
-        // Number
-
-        ctx.fillStyle = "white";
-
-        ctx.font =
-            `bold ${Math.max(
-                9,
-                size * 0.65
-            )}px Arial`;
-
-        ctx.textAlign = "center";
-
-        ctx.fillText(
-            p.number,
-            x,
-            y - size * 0.15
-        );
+            ctx.fillText(
+                p.number,
+                projected.x,
+                projected.y -
+                    bodyHeight * 0.35
+            );
+        }
     }
-
 
     // ========================================================
     // DRAW BALL
@@ -884,26 +806,24 @@ document.addEventListener("DOMContentLoaded", () => {
     function drawBall() {
 
         const projected =
-            project3D(
+            project(
                 ball.x,
-                ball.y
+                ball.y,
+                ball.z
             );
-
 
         if (!projected) {
             return;
         }
 
-
         const radius =
             Math.max(
                 4,
                 Math.min(
-                    projected.scale * 0.6,
-                    10
+                    projected.scale * 0.8,
+                    14
                 )
             );
-
 
         ctx.beginPath();
 
@@ -916,17 +836,95 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         ctx.fillStyle = "white";
-
         ctx.fill();
 
         ctx.strokeStyle = "#222";
-
+        ctx.lineWidth = 1.5;
         ctx.stroke();
     }
 
+    // ========================================================
+    // DRAW ALL PLAYERS
+    // ========================================================
+
+    function drawPlayers() {
+
+        const players = [
+            ...teammates,
+            ...opponents
+        ];
+
+        /*
+            Farther players first.
+        */
+
+        players.sort(
+            (a, b) =>
+                b.y - a.y
+        );
+
+        players.forEach(
+            drawPlayer
+        );
+    }
 
     // ========================================================
-    // DRAW SCENE
+    // PLAYER YOU ARE
+    // ========================================================
+
+    function drawUserIndicator() {
+
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        /*
+            You don't need to see a giant
+            character in first person.
+
+            Instead show the bottom of the
+            screen as your player's position.
+        */
+
+        ctx.fillStyle =
+            "rgba(25,118,232,0.9)";
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            w / 2 - 25,
+            h
+        );
+
+        ctx.lineTo(
+            w / 2 + 25,
+            h
+        );
+
+        ctx.lineTo(
+            w / 2,
+            h - 45
+        );
+
+        ctx.closePath();
+
+        ctx.fill();
+
+        ctx.fillStyle = "white";
+
+        ctx.font =
+            "bold 13px Arial";
+
+        ctx.textAlign = "center";
+
+        ctx.fillText(
+            "YOU",
+            w / 2,
+            h - 15
+        );
+    }
+
+    // ========================================================
+    // SCENE
     // ========================================================
 
     function drawScene() {
@@ -938,56 +936,43 @@ document.addEventListener("DOMContentLoaded", () => {
             window.innerHeight
         );
 
-
         drawPitch();
 
-
-        // Draw players from farthest
-        // to closest.
-
-        const players = [
-            ...teammates,
-            ...opponents
-        ].sort(
-            (a, b) =>
-                b.y - a.y
-        );
-
-
-        players.forEach(
-            drawPlayer
-        );
-
+        drawPlayers();
 
         drawBall();
+
+        drawUserIndicator();
     }
 
-
     // ========================================================
-    // FIND CLICKED PLAYER
+    // FIND TEAMMATE
     // ========================================================
 
-    function findClickedPlayer(
+    function findClickedTeammate(
         x,
         y
     ) {
 
         let closest = null;
-
         let closestDistance =
             Infinity;
 
-
         for (
-            const p of teammates
+            const teammate
+            of teammates
         ) {
 
             const dx =
-                x - p.screenX;
+                x -
+                teammate.screenX;
 
             const dy =
-                y - p.screenY;
-
+                y -
+                (
+                    teammate.screenY -
+                    8
+                );
 
             const d =
                 Math.sqrt(
@@ -995,52 +980,27 @@ document.addEventListener("DOMContentLoaded", () => {
                     dy * dy
                 );
 
+            const radius =
+                Math.max(
+                    25,
+                    teammate.screenRadius * 2
+                );
 
             if (
-                d < p.hitRadius &&
+                d < radius &&
                 d < closestDistance
             ) {
 
-                closest = p;
+                closest =
+                    teammate;
 
-                closestDistance = d;
+                closestDistance =
+                    d;
             }
         }
-
 
         return closest;
     }
-
-
-    // ========================================================
-    // INPUT
-    // ========================================================
-
-    canvas.addEventListener(
-        "pointerdown",
-        event => {
-
-            if (
-                gameState !== "playing"
-            ) {
-                return;
-            }
-
-
-            const target =
-                findClickedPlayer(
-                    event.clientX,
-                    event.clientY
-                );
-
-
-            if (target) {
-
-                makePass(target);
-            }
-        }
-    );
-
 
     // ========================================================
     // PASS
@@ -1052,9 +1012,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-
         scenarioActive = false;
-
 
         const seconds =
             (
@@ -1062,74 +1020,43 @@ document.addEventListener("DOMContentLoaded", () => {
                 decisionStartTime
             ) / 1000;
 
-
         let score = 100;
 
+        const nearestOpponent =
+            Math.min(
+                ...opponents.map(
+                    o =>
+                        distance(
+                            target,
+                            o
+                        )
+                )
+            );
 
-        // Offside
+        if (nearestOpponent < 5)
+            score -= 35;
+
+        else if (nearestOpponent < 8)
+            score -= 18;
+
+        else if (nearestOpponent < 12)
+            score -= 8;
 
         if (
             settings.offside &&
             target.offside
         ) {
-
-            score -= 70;
+            score -= 80;
         }
 
+        if (seconds > 3)
+            score -= 25;
 
-        // Distance
-
-        const d =
-            distance(
-                player,
-                target
-            );
-
-
-        if (d > 30) {
-            score -= 20;
-        } else if (d > 22) {
-            score -= 10;
-        }
-
-
-        // Pressure
-
-        let closestOpponent =
-            Infinity;
-
-
-        opponents.forEach(
-            opponent => {
-
-                const od =
-                    distance(
-                        target,
-                        opponent
-                    );
-
-                closestOpponent =
-                    Math.min(
-                        closestOpponent,
-                        od
-                    );
-            }
-        );
-
-
-        if (
-            closestOpponent < 5
-        ) {
-
-            score -= 35;
-
-        } else if (
-            closestOpponent < 8
-        ) {
-
+        else if (seconds > 2)
             score -= 15;
-        }
 
+        else if (seconds > 1.5)
+            score -= 7;
 
         score =
             Math.max(
@@ -1137,14 +1064,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 Math.round(score)
             );
 
-
         showResult(
             score,
             seconds,
             target
         );
     }
-
 
     // ========================================================
     // RESULT
@@ -1158,25 +1083,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         gameState = "result";
 
+        const result =
+            document.getElementById(
+                "resultScreen"
+            );
 
         const overall =
             document.getElementById(
                 "overallScore"
-            );
-
-        const decision =
-            document.getElementById(
-                "decisionScore"
-            );
-
-        const timing =
-            document.getElementById(
-                "timingScore"
-            );
-
-        const time =
-            document.getElementById(
-                "decisionTime"
             );
 
         const message =
@@ -1189,32 +1103,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 "analysis"
             );
 
+        const time =
+            document.getElementById(
+                "decisionTime"
+            );
 
         if (overall)
-            overall.textContent =
-                score;
-
-
-        if (decision)
-            decision.textContent =
-                score;
-
-
-        if (timing)
-            timing.textContent =
-                Math.max(
-                    0,
-                    Math.round(
-                        100 -
-                        seconds * 15
-                    )
-                );
-
+            overall.textContent = score;
 
         if (time)
             time.textContent =
                 seconds.toFixed(2) + "s";
-
 
         if (
             settings.offside &&
@@ -1223,144 +1122,142 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (message)
                 message.textContent =
-                    "OFFSIDE";
-
+                    "OFFSIDE!";
 
             if (analysis)
                 analysis.textContent =
-                    "Your teammate was offside when the pass was made.";
+                    "Your teammate was beyond the second-last defender when the pass was made.";
 
-        } else if (
-            score >= 90
-        ) {
+        } else if (score >= 90) {
 
             if (message)
                 message.textContent =
                     "EXCELLENT DECISION";
 
-
             if (analysis)
                 analysis.textContent =
-                    "Excellent passing option.";
+                    "Great awareness and a strong passing option.";
 
-        } else if (
-            score >= 70
-        ) {
+        } else if (score >= 75) {
 
             if (message)
                 message.textContent =
                     "GOOD DECISION";
 
-
             if (analysis)
                 analysis.textContent =
-                    "A solid passing option.";
+                    "A solid option, although there may have been an even better pass.";
 
-        } else {
+        } else if (score >= 50) {
 
             if (message)
                 message.textContent =
                     "COULD BE BETTER";
 
+            if (analysis)
+                analysis.textContent =
+                    "The pass was playable, but pressure or positioning reduced its quality.";
+
+        } else {
+
+            if (message)
+                message.textContent =
+                    "POOR DECISION";
 
             if (analysis)
                 analysis.textContent =
-                    "Look for a safer passing lane.";
+                    "Check the defensive line and nearby pressure before passing.";
         }
 
+        if (result) {
 
-        const resultScreen =
-            document.getElementById(
-                "resultScreen"
-            );
-
-
-        if (resultScreen) {
-
-            resultScreen.classList.remove(
+            result.classList.remove(
                 "hidden"
             );
         }
     }
 
-
     // ========================================================
-    // START GAME
+    // START SCENARIO
     // ========================================================
 
-    function startGame() {
+    function startScenario() {
 
         gameState = "playing";
 
-        scenarioNumber =
-            Math.max(
-                1,
-                scenarioNumber
-            );
-
-
         generateScenario();
 
-
-        const startScreen =
+        const start =
             document.getElementById(
                 "startScreen"
             );
-
 
         const settingsScreen =
             document.getElementById(
                 "settingsScreen"
             );
 
-
-        const resultScreen =
+        const result =
             document.getElementById(
                 "resultScreen"
             );
 
-
-        if (startScreen)
-            startScreen.classList.add(
-                "hidden"
-            );
-
+        if (start)
+            start.classList.add("hidden");
 
         if (settingsScreen)
-            settingsScreen.classList.add(
-                "hidden"
-            );
+            settingsScreen.classList.add("hidden");
 
+        if (result)
+            result.classList.add("hidden");
 
-        if (resultScreen)
-            resultScreen.classList.add(
-                "hidden"
-            );
-
-
-        const scenarioText =
+        const scenario =
             document.getElementById(
                 "scenarioNumber"
             );
 
-
-        if (scenarioText)
-            scenarioText.textContent =
+        if (scenario)
+            scenario.textContent =
                 "SCENARIO " +
                 scenarioNumber;
-
 
         const instruction =
             document.getElementById(
                 "instruction"
             );
 
-
         if (instruction)
             instruction.textContent =
                 "TAP A TEAMMATE TO PASS";
     }
 
+    // ========================================================
+    // INPUT
+    // ========================================================
+
+    canvas.addEventListener(
+        "pointerdown",
+        function(event) {
+
+            if (
+                gameState !==
+                "playing"
+            ) {
+                return;
+            }
+
+            const target =
+                findClickedTeammate(
+                    event.clientX,
+                    event.clientY
+                );
+
+            if (target) {
+
+                makePass(target);
+            }
+        }
+    );
 
     // ========================================================
     // BUTTONS
@@ -1386,32 +1283,23 @@ document.addEventListener("DOMContentLoaded", () => {
             "nextButton"
         );
 
-
     // START
 
     if (startButton) {
 
-        startButton.addEventListener(
-            "click",
-            event => {
+        startButton.onclick =
+            function() {
 
-                event.preventDefault();
-
-                startGame();
-            }
-        );
+                startScenario();
+            };
     }
-
 
     // SETTINGS
 
     if (settingsButton) {
 
-        settingsButton.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
+        settingsButton.onclick =
+            function() {
 
                 const start =
                     document.getElementById(
@@ -1432,20 +1320,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     settingsScreen.classList.remove(
                         "hidden"
                     );
-            }
-        );
+            };
     }
-
 
     // BACK
 
     if (settingsBack) {
 
-        settingsBack.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
+        settingsBack.onclick =
+            function() {
 
                 const start =
                     document.getElementById(
@@ -1466,190 +1349,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     start.classList.remove(
                         "hidden"
                     );
-            }
-        );
+            };
     }
 
-
-    // NEXT SCENARIO
+    // NEXT
 
     if (nextButton) {
 
-        nextButton.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
+        nextButton.onclick =
+            function() {
 
                 scenarioNumber++;
 
-                startGame();
-            }
-        );
+                startScenario();
+            };
     }
-
-
-    // ========================================================
-    // SETTINGS CONTROLS
-    // ========================================================
-
-    const offsideButton =
-        document.getElementById(
-            "offsideButton"
-        );
-
-    const ringsButton =
-        document.getElementById(
-            "ringsButton"
-        );
-
-    const teamCount =
-        document.getElementById(
-            "teamCount"
-        );
-
-    const opponentCount =
-        document.getElementById(
-            "opponentCount"
-        );
-
-
-    const teamPlus =
-        document.getElementById(
-            "teamPlus"
-        );
-
-    const teamMinus =
-        document.getElementById(
-            "teamMinus"
-        );
-
-    const opponentPlus =
-        document.getElementById(
-            "opponentPlus"
-        );
-
-    const opponentMinus =
-        document.getElementById(
-            "opponentMinus"
-        );
-
-
-    if (offsideButton) {
-
-        offsideButton.addEventListener(
-            "click",
-            () => {
-
-                settings.offside =
-                    !settings.offside;
-
-                offsideButton.textContent =
-                    settings.offside
-                        ? "ON"
-                        : "OFF";
-            }
-        );
-    }
-
-
-    if (ringsButton) {
-
-        ringsButton.addEventListener(
-            "click",
-            () => {
-
-                settings.offsideRings =
-                    !settings.offsideRings;
-
-                ringsButton.textContent =
-                    settings.offsideRings
-                        ? "ON"
-                        : "OFF";
-            }
-        );
-    }
-
-
-    if (teamPlus) {
-
-        teamPlus.addEventListener(
-            "click",
-            () => {
-
-                settings.teammates =
-                    Math.min(
-                        10,
-                        settings.teammates + 1
-                    );
-
-                if (teamCount)
-                    teamCount.textContent =
-                        settings.teammates;
-            }
-        );
-    }
-
-
-    if (teamMinus) {
-
-        teamMinus.addEventListener(
-            "click",
-            () => {
-
-                settings.teammates =
-                    Math.max(
-                        2,
-                        settings.teammates - 1
-                    );
-
-                if (teamCount)
-                    teamCount.textContent =
-                        settings.teammates;
-            }
-        );
-    }
-
-
-    if (opponentPlus) {
-
-        opponentPlus.addEventListener(
-            "click",
-            () => {
-
-                settings.opponents =
-                    Math.min(
-                        12,
-                        settings.opponents + 1
-                    );
-
-                if (opponentCount)
-                    opponentCount.textContent =
-                        settings.opponents;
-            }
-        );
-    }
-
-
-    if (opponentMinus) {
-
-        opponentMinus.addEventListener(
-            "click",
-            () => {
-
-                settings.opponents =
-                    Math.max(
-                        2,
-                        settings.opponents - 1
-                    );
-
-                if (opponentCount)
-                    opponentCount.textContent =
-                        settings.opponents;
-            }
-        );
-    }
-
 
     // ========================================================
     // GAME LOOP
@@ -1669,16 +1383,13 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
+    // ========================================================
+    // INITIALISE
+    // ========================================================
 
     gameLoop();
 
-
-    // ========================================================
-    // DEBUG
-    // ========================================================
-
     console.log(
-        "Football IQ game.js loaded successfully."
+        "Football IQ first-person game ready."
     );
-
-});
+}
