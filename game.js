@@ -1,6 +1,6 @@
 // ============================================================
-// FOOTBALL IQ TRAINER
-// Clean game.js
+// FOOTBALL IQ — GAME.JS
+// Close-up football decision trainer
 // ============================================================
 
 const canvas = document.getElementById("gameCanvas");
@@ -26,16 +26,14 @@ const settings = {
 let gameState = "menu";
 let scenarioNumber = 1;
 
-let teammates = [];
-let opponents = [];
-
 let player = null;
 let ball = null;
 
-let selectedPlayer = null;
+let teammates = [];
+let opponents = [];
 
-let decisionStartTime = 0;
 let scenarioActive = false;
+let decisionStartTime = 0;
 
 
 // ============================================================
@@ -56,371 +54,52 @@ function resizeCanvas() {
 }
 
 window.addEventListener("resize", resizeCanvas);
-
 resizeCanvas();
 
 
 // ============================================================
-// PERSPECTIVE
+// FIELD
 // ============================================================
 
-const pitch = {
-    width: 105,
-    length: 68
-};
-
-const camera = {
-    x: 0,
-    y: 0,
-    height: 1.7
-};
+const FIELD_WIDTH = 60;
+const FIELD_HEIGHT = 70;
 
 
-function project3D(x, y, z = 0) {
+// ============================================================
+// PLAYER OBJECT
+// ============================================================
 
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    const relativeX = x - camera.x;
-    const relativeY = y - camera.y;
-
-    if (relativeY <= 0.5) {
-        return null;
-    }
-
-    const scale = (h * 0.85) / relativeY;
-
-    const screenX =
-        w / 2 + relativeX * scale;
-
-    const horizon =
-        h * 0.30;
-
-    const screenY =
-        horizon +
-        (camera.height - z) * scale;
+function createPlayer(x, y, team, number) {
 
     return {
-        x: screenX,
-        y: screenY,
-        scale: scale
-    };
-}
-
-
-// ============================================================
-// PITCH
-// ============================================================
-
-function drawPitch() {
-
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    const horizonY = h * 0.30;
-    const bottomY = h;
-
-    const topWidth = w * 0.18;
-    const bottomWidth = w * 1.35;
-
-
-    // SKY
-
-    const sky =
-        ctx.createLinearGradient(
-            0,
-            0,
-            0,
-            horizonY
-        );
-
-    sky.addColorStop(0, "#6caed3");
-    sky.addColorStop(1, "#c5e2eb");
-
-    ctx.fillStyle = sky;
-
-    ctx.fillRect(
-        0,
-        0,
-        w,
-        h
-    );
-
-
-    // STADIUM
-
-    ctx.fillStyle = "#3e4449";
-
-    ctx.fillRect(
-        0,
-        horizonY,
-        w,
-        h * 0.25
-    );
-
-
-    // STANDS
-
-    for (let i = 0; i < 14; i++) {
-
-        const standX = i * w / 14;
-
-        ctx.fillStyle =
-            i % 2 === 0
-                ? "#555b60"
-                : "#474d52";
-
-        ctx.fillRect(
-            standX,
-            horizonY + 15,
-            w / 15,
-            h * 0.17
-        );
-    }
-
-
-    // PITCH
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w / 2 - topWidth / 2,
-        horizonY
-    );
-
-    ctx.lineTo(
-        w / 2 + topWidth / 2,
-        horizonY
-    );
-
-    ctx.lineTo(
-        w / 2 + bottomWidth / 2,
-        bottomY
-    );
-
-    ctx.lineTo(
-        w / 2 - bottomWidth / 2,
-        bottomY
-    );
-
-    ctx.closePath();
-
-
-    const grass =
-        ctx.createLinearGradient(
-            0,
-            horizonY,
-            0,
-            bottomY
-        );
-
-    grass.addColorStop(0, "#287b43");
-    grass.addColorStop(0.5, "#218044");
-    grass.addColorStop(1, "#155f31");
-
-    ctx.fillStyle = grass;
-
-    ctx.fill();
-
-
-    // GRASS STRIPES
-
-    for (let i = 0; i < 16; i++) {
-
-        const p1 = i / 16;
-        const p2 = (i + 1) / 16;
-
-        const y1 =
-            horizonY +
-            (bottomY - horizonY) * p1;
-
-        const y2 =
-            horizonY +
-            (bottomY - horizonY) * p2;
-
-        const width1 =
-            topWidth +
-            (bottomWidth - topWidth) * p1;
-
-        const width2 =
-            topWidth +
-            (bottomWidth - topWidth) * p2;
-
-        if (i % 2 === 0) {
-
-            ctx.beginPath();
-
-            ctx.moveTo(
-                w / 2 - width1 / 2,
-                y1
-            );
-
-            ctx.lineTo(
-                w / 2 + width1 / 2,
-                y1
-            );
-
-            ctx.lineTo(
-                w / 2 + width2 / 2,
-                y2
-            );
-
-            ctx.lineTo(
-                w / 2 - width2 / 2,
-                y2
-            );
-
-            ctx.closePath();
-
-            ctx.fillStyle =
-                "rgba(255,255,255,0.025)";
-
-            ctx.fill();
-        }
-    }
-
-
-    // SIDELINES
-
-    ctx.strokeStyle =
-        "rgba(255,255,255,0.92)";
-
-    ctx.lineWidth = 3;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w / 2 - topWidth / 2,
-        horizonY
-    );
-
-    ctx.lineTo(
-        w / 2 - bottomWidth / 2,
-        bottomY
-    );
-
-    ctx.moveTo(
-        w / 2 + topWidth / 2,
-        horizonY
-    );
-
-    ctx.lineTo(
-        w / 2 + bottomWidth / 2,
-        bottomY
-    );
-
-    ctx.stroke();
-
-
-    // FIELD LINES
-
-    drawHorizontalPitchLine(0.20);
-    drawHorizontalPitchLine(0.43);
-    drawHorizontalPitchLine(0.68);
-}
-
-
-// ============================================================
-// FIELD LINES
-// ============================================================
-
-function drawHorizontalPitchLine(position) {
-
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    const horizonY = h * 0.30;
-    const bottomY = h;
-
-    const topWidth = w * 0.18;
-    const bottomWidth = w * 1.35;
-
-    const y =
-        horizonY +
-        (bottomY - horizonY) * position;
-
-    const width =
-        topWidth +
-        (bottomWidth - topWidth) * position;
-
-    ctx.strokeStyle =
-        "rgba(255,255,255,0.82)";
-
-    ctx.lineWidth = 2;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w / 2 - width / 2,
-        y
-    );
-
-    ctx.lineTo(
-        w / 2 + width / 2,
-        y
-    );
-
-    ctx.stroke();
-}
-
-
-// ============================================================
-// PLAYER CREATION
-// ============================================================
-
-function createPlayer(
-    x,
-    y,
-    team,
-    number
-) {
-
-    return {
-
         x,
         y,
-
-        z: 0,
-
         team,
         number,
 
-        selectable: team === "blue",
-
         offside: false,
+
+        selectable: team === "blue",
 
         screenX: 0,
         screenY: 0,
-        screenRadius: 0
+        hitRadius: 35
     };
 }
 
 
 // ============================================================
-// RANDOM
+// CREATE USER
 // ============================================================
 
-function randomRange(min, max) {
+function createUser() {
 
-    return Math.random() *
-        (max - min) +
-        min;
-}
-
-
-// ============================================================
-// USER PLAYER
-// ============================================================
-
-function createUserPlayer() {
-
-    player =
-        createPlayer(
-            0,
-            3,
-            "blue",
-            10
-        );
+    player = createPlayer(
+        0,
+        0,
+        "blue",
+        10
+    );
 
     player.isUser = true;
     player.selectable = false;
@@ -428,12 +107,47 @@ function createUserPlayer() {
 
 
 // ============================================================
-// TEAMMATES
+// RANDOM
+// ============================================================
+
+function random(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+
+// ============================================================
+// GENERATE TEAMMATES
 // ============================================================
 
 function generateTeammates() {
 
     teammates = [];
+
+    /*
+     * These positions are intentionally close
+     * to the user.
+     *
+     * The user is always at:
+     *
+     *              O
+     *
+     * Teammates appear around them.
+     */
+
+    const positions = [
+        [-14, -10],
+        [ 14, -8],
+
+        [-18,  3],
+        [ 18,  5],
+
+        [-10, 15],
+        [ 11, 18],
+
+        [-22, 12],
+        [ 22, 14]
+    ];
+
 
     for (
         let i = 0;
@@ -441,10 +155,12 @@ function generateTeammates() {
         i++
     ) {
 
+        const p = positions[i];
+
         teammates.push(
             createPlayer(
-                randomRange(-24, 24),
-                randomRange(10, 58),
+                p[0] + random(-2, 2),
+                p[1] + random(-2, 2),
                 "blue",
                 i + 1
             )
@@ -454,12 +170,40 @@ function generateTeammates() {
 
 
 // ============================================================
-// OPPONENTS
+// GENERATE OPPONENTS
 // ============================================================
 
 function generateOpponents() {
 
     opponents = [];
+
+    /*
+     * Defenders are also close.
+     *
+     * They create pressure around the
+     * player instead of appearing miles away.
+     */
+
+    const positions = [
+        [-8,  8],
+        [ 8,  9],
+
+        [-16, 16],
+        [ 16, 17],
+
+        [-5, 24],
+        [ 7, 25],
+
+        [-20, 25],
+
+        [20, 26],
+
+        [0, 32],
+        [-13, 31],
+        [14, 32],
+        [0, 40]
+    ];
+
 
     for (
         let i = 0;
@@ -467,10 +211,12 @@ function generateOpponents() {
         i++
     ) {
 
+        const p = positions[i];
+
         opponents.push(
             createPlayer(
-                randomRange(-28, 28),
-                randomRange(15, 52),
+                p[0] + random(-2, 2),
+                p[1] + random(-2, 2),
                 "red",
                 i + 1
             )
@@ -486,47 +232,9 @@ function generateOpponents() {
 function createBall() {
 
     ball = {
-
         x: 0,
-        y: 5,
-        z: 0.15,
-        radius: 0.35
+        y: 2
     };
-}
-
-
-// ============================================================
-// DISTANCE
-// ============================================================
-
-function distanceBetween(a, b) {
-
-    const dx = a.x - b.x;
-    const dy = a.y - b.y;
-
-    return Math.sqrt(
-        dx * dx +
-        dy * dy
-    );
-}
-
-
-// ============================================================
-// SECOND LAST DEFENDER
-// ============================================================
-
-function getSecondLastDefender() {
-
-    if (opponents.length < 2) {
-        return null;
-    }
-
-    const sorted =
-        [...opponents].sort(
-            (a, b) => b.y - a.y
-        );
-
-    return sorted[1];
 }
 
 
@@ -536,55 +244,252 @@ function getSecondLastDefender() {
 
 function calculateOffside() {
 
-    if (!settings.offside) {
+    teammates.forEach(
+        teammate => {
+            teammate.offside = false;
+        }
+    );
 
-        teammates.forEach(
-            p => p.offside = false
+    if (!settings.offside) {
+        return;
+    }
+
+    if (opponents.length < 2) {
+        return;
+    }
+
+    /*
+     * The two highest defenders form
+     * the offside line.
+     */
+
+    const defenders =
+        [...opponents].sort(
+            (a, b) => b.y - a.y
         );
 
-        return;
-    }
-
-    const defender =
-        getSecondLastDefender();
-
-    if (!defender) {
-        return;
-    }
+    const secondLast =
+        defenders[1];
 
     teammates.forEach(
         teammate => {
 
+            const aheadOfBall =
+                teammate.y > ball.y;
+
+            const beyondLine =
+                teammate.y >
+                secondLast.y;
+
             teammate.offside =
-                teammate.y > ball.y &&
-                teammate.y > defender.y;
+                aheadOfBall &&
+                beyondLine;
         }
     );
 }
 
 
 // ============================================================
-// GENERATE SCENARIO
+// NEW SCENARIO
 // ============================================================
 
 function generateScenario() {
 
-    createUserPlayer();
-
+    createUser();
     createBall();
 
     generateTeammates();
-
     generateOpponents();
 
     calculateOffside();
 
-    selectedPlayer = null;
+    scenarioActive = true;
 
     decisionStartTime =
         performance.now();
+}
 
-    scenarioActive = true;
+
+// ============================================================
+// FIELD PROJECTION
+// ============================================================
+
+function project(x, y) {
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    /*
+     * We deliberately keep the playable area
+     * close to the centre of the screen.
+     */
+
+    const fieldLeft = w * 0.06;
+    const fieldRight = w * 0.94;
+
+    const fieldTop = h * 0.22;
+    const fieldBottom = h * 0.95;
+
+    const screenX =
+        w / 2 +
+        (x / FIELD_WIDTH) *
+        (fieldRight - fieldLeft);
+
+    const screenY =
+        fieldBottom -
+        ((y + 15) / FIELD_HEIGHT) *
+        (fieldBottom - fieldTop);
+
+    return {
+        x: screenX,
+        y: screenY
+    };
+}
+
+
+// ============================================================
+// DRAW PITCH
+// ============================================================
+
+function drawPitch() {
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    // BACKGROUND
+
+    ctx.fillStyle = "#111820";
+
+    ctx.fillRect(
+        0,
+        0,
+        w,
+        h
+    );
+
+
+    // STADIUM
+
+    ctx.fillStyle = "#3e4449";
+
+    ctx.fillRect(
+        0,
+        h * 0.12,
+        w,
+        h * 0.18
+    );
+
+
+    // PITCH
+
+    const left = w * 0.06;
+    const right = w * 0.94;
+
+    const top = h * 0.22;
+    const bottom = h * 0.96;
+
+
+    ctx.fillStyle = "#247b42";
+
+    ctx.fillRect(
+        left,
+        top,
+        right - left,
+        bottom - top
+    );
+
+
+    // STRIPES
+
+    const stripeHeight =
+        (bottom - top) / 10;
+
+    for (let i = 0; i < 10; i++) {
+
+        if (i % 2 === 0) {
+
+            ctx.fillStyle =
+                "rgba(255,255,255,0.025)";
+
+            ctx.fillRect(
+                left,
+                top + i * stripeHeight,
+                right - left,
+                stripeHeight
+            );
+        }
+    }
+
+
+    // SIDELINES
+
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 3;
+
+    ctx.strokeRect(
+        left,
+        top,
+        right - left,
+        bottom - top
+    );
+
+
+    // HORIZONTAL FIELD LINES
+
+    for (let i = 1; i < 5; i++) {
+
+        const y =
+            top +
+            (bottom - top) *
+            (i / 5);
+
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+
+        ctx.moveTo(left, y);
+        ctx.lineTo(right, y);
+
+        ctx.stroke();
+    }
+
+
+    // CENTRE CIRCLE
+
+    const centreX = w / 2;
+
+    const centreY =
+        top +
+        (bottom - top) * 0.50;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        centreX,
+        centreY,
+        Math.min(w, h) * 0.09,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.stroke();
+
+
+    // CENTRE SPOT
+
+    ctx.beginPath();
+
+    ctx.arc(
+        centreX,
+        centreY,
+        4,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "white";
+
+    ctx.fill();
 }
 
 
@@ -594,54 +499,41 @@ function generateScenario() {
 
 function drawPlayer(p) {
 
-    const projected =
-        project3D(
+    const pos =
+        project(
             p.x,
-            p.y,
-            p.z
+            p.y
         );
 
-    if (!projected) {
-        return;
-    }
+    const x = pos.x;
+    const y = pos.y;
 
-
-    const scale =
+    const size =
         Math.max(
-            0.15,
+            0.75,
             Math.min(
-                projected.scale,
-                3
+                window.innerWidth / 700,
+                1.35
             )
         );
 
 
-    const x = projected.x;
-    const y = projected.y;
-
-
-    // Larger touch target
-
     p.screenX = x;
     p.screenY = y;
-    p.screenRadius =
-        Math.max(
-            18,
-            9 * scale
-        );
+
+    p.hitRadius =
+        35 * size;
 
 
-    // -------------------------
     // SHADOW
-    // -------------------------
 
     ctx.beginPath();
 
     ctx.ellipse(
         x,
-        y + 3,
-        9 * scale,
-        4 * scale,
+        y + 7 * size,
+        14 * size,
+        5 * size,
         0,
         0,
         Math.PI * 2
@@ -653,9 +545,7 @@ function drawPlayer(p) {
     ctx.fill();
 
 
-    // -------------------------
     // OFFSIDE RING
-    // -------------------------
 
     if (
         p.offside &&
@@ -666,169 +556,136 @@ function drawPlayer(p) {
 
         ctx.arc(
             x,
-            y - 10 * scale,
-            18 * scale,
+            y - 18 * size,
+            27 * size,
             0,
             Math.PI * 2
         );
 
         ctx.strokeStyle =
-            "#ff9b24";
+            "#ff9f24";
 
-        ctx.lineWidth =
-            3 * scale;
+        ctx.lineWidth = 3;
 
         ctx.stroke();
     }
 
 
-    // -------------------------
-    // BLOCKY BODY
-    // -------------------------
-
-    const bodyWidth =
-        12 * scale;
-
-    const bodyHeight =
-        18 * scale;
-
-    const bodyY =
-        y - bodyHeight;
-
+    // BODY
 
     ctx.fillStyle =
         p.team === "blue"
-            ? "#1677e8"
-            : "#e53935";
-
+            ? "#2185ed"
+            : "#e63946";
 
     ctx.fillRect(
-        x - bodyWidth / 2,
-        bodyY,
-        bodyWidth,
-        bodyHeight
+        x - 10 * size,
+        y - 30 * size,
+        20 * size,
+        22 * size
     );
 
 
-    // -------------------------
     // HEAD
-    // -------------------------
-
-    const headSize =
-        10 * scale;
-
 
     ctx.fillStyle =
-        "#d99a72";
-
+        "#d79b73";
 
     ctx.fillRect(
-        x - headSize / 2,
-        bodyY - headSize,
-        headSize,
-        headSize
+        x - 8 * size,
+        y - 46 * size,
+        16 * size,
+        16 * size
     );
 
 
-    // -------------------------
-    // LEGS
-    // -------------------------
+    // HAIR
 
-    ctx.fillStyle =
-        "#20242a";
-
+    ctx.fillStyle = "#202020";
 
     ctx.fillRect(
-        x - 6 * scale,
-        y,
-        5 * scale,
-        10 * scale
+        x - 8 * size,
+        y - 47 * size,
+        16 * size,
+        5 * size
     );
 
 
-    ctx.fillRect(
-        x + 1 * scale,
-        y,
-        5 * scale,
-        10 * scale
-    );
-
-
-    // -------------------------
     // ARMS
-    // -------------------------
 
     ctx.fillStyle =
         p.team === "blue"
-            ? "#1677e8"
-            : "#e53935";
-
+            ? "#2185ed"
+            : "#e63946";
 
     ctx.fillRect(
-        x - bodyWidth / 2 - 4 * scale,
-        bodyY + 2 * scale,
-        4 * scale,
-        12 * scale
+        x - 16 * size,
+        y - 29 * size,
+        6 * size,
+        18 * size
+    );
+
+    ctx.fillRect(
+        x + 10 * size,
+        y - 29 * size,
+        6 * size,
+        18 * size
     );
 
 
+    // LEGS
+
     ctx.fillRect(
-        x + bodyWidth / 2,
-        bodyY + 2 * scale,
-        4 * scale,
-        12 * scale
+        x - 8 * size,
+        y - 8 * size,
+        7 * size,
+        15 * size
+    );
+
+    ctx.fillRect(
+        x + 1 * size,
+        y - 8 * size,
+        7 * size,
+        15 * size
     );
 
 
-    // -------------------------
-    // SELECTABLE GLOW
-    // -------------------------
+    // NUMBER
+
+    ctx.fillStyle = "white";
+
+    ctx.font =
+        `bold ${Math.max(
+            10,
+            11 * size
+        )}px Arial`;
+
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+        p.number,
+        x,
+        y - 15 * size
+    );
+
+
+    // SELECTABLE BORDER
 
     if (
         p.selectable &&
         !p.offside
     ) {
 
-        ctx.beginPath();
-
-        ctx.arc(
-            x,
-            bodyY + bodyHeight / 2,
-            19 * scale,
-            0,
-            Math.PI * 2
-        );
-
         ctx.strokeStyle =
-            "rgba(255,255,255,0.45)";
+            "rgba(255,255,255,0.65)";
 
         ctx.lineWidth = 2;
 
-        ctx.stroke();
-    }
-
-
-    // -------------------------
-    // NUMBER
-    // -------------------------
-
-    if (scale > 0.45) {
-
-        ctx.fillStyle = "white";
-
-        ctx.font =
-            `bold ${Math.max(
-                8,
-                6 * scale
-            )}px Arial`;
-
-        ctx.textAlign = "center";
-
-        ctx.fillText(
-            p.number,
-            x,
-            bodyY +
-            bodyHeight * 0.65
+        ctx.strokeRect(
+            x - 17 * size,
+            y - 49 * size,
+            34 * size,
+            43 * size
         );
     }
 }
@@ -840,41 +697,27 @@ function drawPlayer(p) {
 
 function drawBall() {
 
-    const projected =
-        project3D(
+    const pos =
+        project(
             ball.x,
-            ball.y,
-            ball.z
-        );
-
-    if (!projected) {
-        return;
-    }
-
-    const radius =
-        Math.max(
-            4,
-            Math.min(
-                projected.scale * 0.65,
-                16
-            )
+            ball.y
         );
 
 
     ctx.beginPath();
 
     ctx.ellipse(
-        projected.x,
-        projected.y + 4,
-        radius * 1.3,
-        radius * 0.45,
+        pos.x,
+        pos.y + 5,
+        8,
+        4,
         0,
         0,
         Math.PI * 2
     );
 
     ctx.fillStyle =
-        "rgba(0,0,0,0.3)";
+        "rgba(0,0,0,0.35)";
 
     ctx.fill();
 
@@ -882,9 +725,9 @@ function drawBall() {
     ctx.beginPath();
 
     ctx.arc(
-        projected.x,
-        projected.y,
-        radius,
+        pos.x,
+        pos.y,
+        7,
         0,
         Math.PI * 2
     );
@@ -895,31 +738,9 @@ function drawBall() {
 
     ctx.strokeStyle = "#222";
 
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.5;
 
     ctx.stroke();
-}
-
-
-// ============================================================
-// DRAW PLAYERS
-// ============================================================
-
-function drawPlayers() {
-
-    const allPlayers = [
-        ...opponents,
-        ...teammates
-    ];
-
-    allPlayers.sort(
-        (a, b) =>
-            b.y - a.y
-    );
-
-    allPlayers.forEach(
-        drawPlayer
-    );
 }
 
 
@@ -929,409 +750,76 @@ function drawPlayers() {
 
 function drawScene() {
 
-    ctx.clearRect(
-        0,
-        0,
-        window.innerWidth,
-        window.innerHeight
-    );
-
     drawPitch();
 
-    drawPlayers();
+
+    // Furthest first
+
+    opponents
+        .sort((a, b) => b.y - a.y)
+        .forEach(drawPlayer);
+
+    teammates
+        .sort((a, b) => b.y - a.y)
+        .forEach(drawPlayer);
+
+
+    // User
+
+    if (player) {
+        drawPlayer(player);
+    }
+
 
     drawBall();
 }
 
 
 // ============================================================
-// START SCENARIO
+// FIND CLICKED PLAYER
 // ============================================================
 
-function startScenario() {
-
-    gameState = "playing";
-
-    generateScenario();
-
-
-    const scenarioText =
-        document.getElementById(
-            "scenarioNumber"
-        );
-
-    if (scenarioText) {
-
-        scenarioText.textContent =
-            `SCENARIO ${scenarioNumber}`;
-    }
-
-
-    const instruction =
-        document.getElementById(
-            "instruction"
-        );
-
-    if (instruction) {
-
-        instruction.textContent =
-            "TAP A TEAMMATE TO PASS";
-    }
-
-
-    hide("startScreen");
-    hide("settingsScreen");
-    hide("resultScreen");
-}
-
-
-// ============================================================
-// HIDE / SHOW
-// ============================================================
-
-function hide(id) {
-
-    const element =
-        document.getElementById(id);
-
-    if (element) {
-        element.classList.add("hidden");
-    }
-}
-
-
-function show(id) {
-
-    const element =
-        document.getElementById(id);
-
-    if (element) {
-        element.classList.remove("hidden");
-    }
-}
-
-
-// ============================================================
-// PASS QUALITY
-// ============================================================
-
-function calculatePassQuality(target) {
-
-    let score = 100;
-
-    const distance =
-        distanceBetween(
-            player,
-            target
-        );
-
-
-    if (distance > 35) {
-        score -= 15;
-    }
-    else if (distance > 25) {
-        score -= 8;
-    }
-
-
-    let closestOpponent =
-        Infinity;
-
-
-    opponents.forEach(
-        opponent => {
-
-            const d =
-                distanceBetween(
-                    target,
-                    opponent
-                );
-
-            if (
-                d < closestOpponent
-            ) {
-                closestOpponent = d;
-            }
-        }
-    );
-
-
-    if (closestOpponent < 5) {
-        score -= 40;
-    }
-    else if (closestOpponent < 8) {
-        score -= 20;
-    }
-    else if (closestOpponent < 12) {
-        score -= 8;
-    }
-
-
-    if (
-        settings.offside &&
-        target.offside
-    ) {
-        score -= 80;
-    }
-
-
-    return Math.max(
-        0,
-        Math.round(score)
-    );
-}
-
-
-// ============================================================
-// TIMING
-// ============================================================
-
-function calculateTimingScore(seconds) {
-
-    if (seconds <= 0.8) return 100;
-    if (seconds <= 1.2) return 95;
-    if (seconds <= 1.6) return 88;
-    if (seconds <= 2.0) return 80;
-    if (seconds <= 2.5) return 70;
-    if (seconds <= 3.0) return 60;
-    if (seconds <= 4.0) return 45;
-
-    return 30;
-}
-
-
-// ============================================================
-// PASS
-// ============================================================
-
-function makePass(target) {
-
-    if (!scenarioActive) {
-        return;
-    }
-
-    scenarioActive = false;
-
-    selectedPlayer = target;
-
-
-    const seconds =
-        (
-            performance.now() -
-            decisionStartTime
-        ) / 1000;
-
-
-    const decisionScore =
-        calculatePassQuality(
-            target
-        );
-
-
-    const timingScore =
-        calculateTimingScore(
-            seconds
-        );
-
-
-    const overall =
-        Math.round(
-            decisionScore * 0.7 +
-            timingScore * 0.3
-        );
-
-
-    showResult(
-        overall,
-        decisionScore,
-        timingScore,
-        seconds,
-        target
-    );
-}
-
-
-// ============================================================
-// RESULT
-// ============================================================
-
-function showResult(
-    overall,
-    decisionScore,
-    timingScore,
-    seconds,
-    target
-) {
-
-    gameState = "result";
-
-
-    setText(
-        "overallScore",
-        overall
-    );
-
-    setText(
-        "decisionScore",
-        decisionScore
-    );
-
-    setText(
-        "timingScore",
-        timingScore
-    );
-
-    setText(
-        "decisionTime",
-        seconds.toFixed(2) + "s"
-    );
-
-
-    if (
-        settings.offside &&
-        target.offside
-    ) {
-
-        setText(
-            "resultMessage",
-            "OFFSIDE!"
-        );
-
-        setText(
-            "analysis",
-            "Your teammate was beyond the second-last defender when the pass was made."
-        );
-
-    }
-    else if (overall >= 90) {
-
-        setText(
-            "resultMessage",
-            "EXCELLENT DECISION"
-        );
-
-        setText(
-            "analysis",
-            "Excellent awareness, passing choice and reaction speed."
-        );
-
-    }
-    else if (overall >= 75) {
-
-        setText(
-            "resultMessage",
-            "GOOD DECISION"
-        );
-
-        setText(
-            "analysis",
-            "A good passing option, although there may have been a better choice."
-        );
-
-    }
-    else if (overall >= 50) {
-
-        setText(
-            "resultMessage",
-            "COULD BE BETTER"
-        );
-
-        setText(
-            "analysis",
-            "The pass was possible, but pressure or positioning made it less effective."
-        );
-
-    }
-    else {
-
-        setText(
-            "resultMessage",
-            "POOR DECISION"
-        );
-
-        setText(
-            "analysis",
-            "Look for safer passing lanes and check the defensive line before passing."
-        );
-    }
-
-
-    show("resultScreen");
-}
-
-
-function setText(id, value) {
-
-    const element =
-        document.getElementById(id);
-
-    if (element) {
-        element.textContent = value;
-    }
-}
-
-
-// ============================================================
-// FIND TEAMMATE
-// ============================================================
-
-function findClickedTeammate(
-    mouseX,
-    mouseY
-) {
+function findClickedPlayer(x, y) {
 
     let closest = null;
     let closestDistance = Infinity;
 
 
-    teammates.forEach(
-        teammate => {
+    for (const teammate of teammates) {
 
-            if (!teammate.selectable) {
-                return;
-            }
-
-
-            const dx =
-                mouseX -
-                teammate.screenX;
-
-
-            const dy =
-                mouseY -
-                (
-                    teammate.screenY -
-                    10
-                );
-
-
-            const distance =
-                Math.sqrt(
-                    dx * dx +
-                    dy * dy
-                );
-
-
-            const hitRadius =
-                Math.max(
-                    30,
-                    teammate.screenRadius * 2.5
-                );
-
-
-            if (
-                distance < hitRadius &&
-                distance < closestDistance
-            ) {
-
-                closest =
-                    teammate;
-
-                closestDistance =
-                    distance;
-            }
+        if (!teammate.selectable) {
+            continue;
         }
-    );
+
+
+        const dx =
+            x - teammate.screenX;
+
+        const dy =
+            y -
+            (teammate.screenY - 20);
+
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        if (
+            distance <
+            teammate.hitRadius &&
+            distance <
+            closestDistance
+        ) {
+
+            closest = teammate;
+
+            closestDistance =
+                distance;
+        }
+    }
 
 
     return closest;
@@ -1346,39 +834,324 @@ canvas.addEventListener(
     "pointerdown",
     function(event) {
 
-        handleInput(
-            event.clientX,
-            event.clientY
-        );
+        if (
+            gameState !== "playing"
+        ) {
+            return;
+        }
+
+
+        const target =
+            findClickedPlayer(
+                event.clientX,
+                event.clientY
+            );
+
+
+        if (target) {
+
+            makePass(target);
+        }
     }
 );
 
 
-function handleInput(
-    x,
-    y
-) {
+// ============================================================
+// PASS
+// ============================================================
 
-    if (gameState !== "playing") {
+function makePass(target) {
+
+    if (!scenarioActive) {
         return;
     }
 
+    scenarioActive = false;
 
-    const target =
-        findClickedTeammate(
-            x,
-            y
+
+    const seconds =
+        (
+            performance.now() -
+            decisionStartTime
+        ) / 1000;
+
+
+    let score = 100;
+
+
+    const distance =
+        distanceBetween(
+            player,
+            target
         );
 
 
-    if (target) {
-        makePass(target);
+    if (distance > 25) {
+        score -= 15;
     }
+
+
+    if (target.offside) {
+        score -= 80;
+    }
+
+
+    const result =
+        Math.max(
+            0,
+            Math.round(score)
+        );
+
+
+    showResult(
+        result,
+        seconds,
+        target
+    );
 }
 
 
 // ============================================================
-// SETTINGS
+// DISTANCE
+// ============================================================
+
+function distanceBetween(a, b) {
+
+    const dx =
+        a.x - b.x;
+
+    const dy =
+        a.y - b.y;
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+}
+
+
+// ============================================================
+// RESULT
+// ============================================================
+
+function showResult(
+    score,
+    seconds,
+    target
+) {
+
+    gameState = "result";
+
+
+    const overall =
+        document.getElementById(
+            "overallScore"
+        );
+
+    const decision =
+        document.getElementById(
+            "decisionScore"
+        );
+
+    const timing =
+        document.getElementById(
+            "timingScore"
+        );
+
+    const time =
+        document.getElementById(
+            "decisionTime"
+        );
+
+    const message =
+        document.getElementById(
+            "resultMessage"
+        );
+
+    const analysis =
+        document.getElementById(
+            "analysis"
+        );
+
+
+    if (overall)
+        overall.textContent = score;
+
+    if (decision)
+        decision.textContent = score;
+
+    if (timing)
+        timing.textContent =
+            Math.max(
+                0,
+                Math.round(
+                    100 -
+                    seconds * 15
+                )
+            );
+
+    if (time)
+        time.textContent =
+            seconds.toFixed(2) + "s";
+
+
+    if (target.offside) {
+
+        if (message)
+            message.textContent =
+                "OFFSIDE!";
+
+        if (analysis)
+            analysis.textContent =
+                "Your teammate was in an offside position.";
+    }
+
+    else if (score >= 90) {
+
+        if (message)
+            message.textContent =
+                "EXCELLENT DECISION";
+
+        if (analysis)
+            analysis.textContent =
+                "Great passing option.";
+    }
+
+    else if (score >= 70) {
+
+        if (message)
+            message.textContent =
+                "GOOD DECISION";
+
+        if (analysis)
+            analysis.textContent =
+                "A solid passing option.";
+    }
+
+    else {
+
+        if (message)
+            message.textContent =
+                "POOR DECISION";
+
+        if (analysis)
+            analysis.textContent =
+                "There was probably a safer option.";
+    }
+
+
+    show("resultScreen");
+}
+
+
+// ============================================================
+// SCREEN HELPERS
+// ============================================================
+
+function hide(id) {
+
+    const element =
+        document.getElementById(id);
+
+    if (element)
+        element.classList.add("hidden");
+}
+
+
+function show(id) {
+
+    const element =
+        document.getElementById(id);
+
+    if (element)
+        element.classList.remove("hidden");
+}
+
+
+// ============================================================
+// START BUTTON
+// ============================================================
+
+const startButton =
+    document.getElementById(
+        "startButton"
+    );
+
+if (startButton) {
+
+    startButton.onclick =
+        function() {
+
+            startScenario();
+        };
+}
+
+
+// ============================================================
+// SETTINGS BUTTON
+// ============================================================
+
+const settingsButton =
+    document.getElementById(
+        "settingsButton"
+    );
+
+if (settingsButton) {
+
+    settingsButton.onclick =
+        function() {
+
+            hide("startScreen");
+            show("settingsScreen");
+        };
+}
+
+
+// ============================================================
+// SETTINGS BACK
+// ============================================================
+
+const settingsBack =
+    document.getElementById(
+        "settingsBack"
+    );
+
+if (settingsBack) {
+
+    settingsBack.onclick =
+        function() {
+
+            hide("settingsScreen");
+            show("startScreen");
+        };
+}
+
+
+// ============================================================
+// NEXT SCENARIO
+// ============================================================
+
+const nextButton =
+    document.getElementById(
+        "nextButton"
+    );
+
+if (nextButton) {
+
+    nextButton.onclick =
+        function() {
+
+            scenarioNumber++;
+
+            hide("resultScreen");
+
+            startScenario();
+        };
+}
+
+
+// ============================================================
+// SETTINGS CONTROLS
 // ============================================================
 
 const offsideButton =
@@ -1402,10 +1175,30 @@ const opponentCount =
     );
 
 
+const teamPlus =
+    document.getElementById(
+        "teamPlus"
+    );
+
+const teamMinus =
+    document.getElementById(
+        "teamMinus"
+    );
+
+const opponentPlus =
+    document.getElementById(
+        "opponentPlus"
+    );
+
+const opponentMinus =
+    document.getElementById(
+        "opponentMinus"
+    );
+
+
 if (offsideButton) {
 
-    offsideButton.addEventListener(
-        "click",
+    offsideButton.onclick =
         function() {
 
             settings.offside =
@@ -1415,15 +1208,13 @@ if (offsideButton) {
                 settings.offside
                     ? "ON"
                     : "OFF";
-        }
-    );
+        };
 }
 
 
 if (ringsButton) {
 
-    ringsButton.addEventListener(
-        "click",
+    ringsButton.onclick =
         function() {
 
             settings.offsideRings =
@@ -1433,50 +1224,31 @@ if (ringsButton) {
                 settings.offsideRings
                     ? "ON"
                     : "OFF";
-        }
-    );
+        };
 }
 
 
-// TEAMMATES +
-
-const teamPlus =
-    document.getElementById(
-        "teamPlus"
-    );
-
 if (teamPlus) {
 
-    teamPlus.addEventListener(
-        "click",
+    teamPlus.onclick =
         function() {
 
             settings.teammates =
                 Math.min(
-                    10,
+                    8,
                     settings.teammates + 1
                 );
 
-            setText(
-                "teamCount",
-                settings.teammates
-            );
-        }
-    );
+            if (teamCount)
+                teamCount.textContent =
+                    settings.teammates;
+        };
 }
 
 
-// TEAMMATES -
-
-const teamMinus =
-    document.getElementById(
-        "teamMinus"
-    );
-
 if (teamMinus) {
 
-    teamMinus.addEventListener(
-        "click",
+    teamMinus.onclick =
         function() {
 
             settings.teammates =
@@ -1485,26 +1257,16 @@ if (teamMinus) {
                     settings.teammates - 1
                 );
 
-            setText(
-                "teamCount",
-                settings.teammates
-            );
-        }
-    );
+            if (teamCount)
+                teamCount.textContent =
+                    settings.teammates;
+        };
 }
 
 
-// OPPONENTS +
-
-const opponentPlus =
-    document.getElementById(
-        "opponentPlus"
-    );
-
 if (opponentPlus) {
 
-    opponentPlus.addEventListener(
-        "click",
+    opponentPlus.onclick =
         function() {
 
             settings.opponents =
@@ -1513,26 +1275,16 @@ if (opponentPlus) {
                     settings.opponents + 1
                 );
 
-            setText(
-                "opponentCount",
-                settings.opponents
-            );
-        }
-    );
+            if (opponentCount)
+                opponentCount.textContent =
+                    settings.opponents;
+        };
 }
 
 
-// OPPONENTS -
-
-const opponentMinus =
-    document.getElementById(
-        "opponentMinus"
-    );
-
 if (opponentMinus) {
 
-    opponentMinus.addEventListener(
-        "click",
+    opponentMinus.onclick =
         function() {
 
             settings.opponents =
@@ -1541,102 +1293,10 @@ if (opponentMinus) {
                     settings.opponents - 1
                 );
 
-            setText(
-                "opponentCount",
-                settings.opponents
-            );
-        }
-    );
-}
-
-
-// ============================================================
-// START BUTTON
-// ============================================================
-
-const startButton =
-    document.getElementById(
-        "startButton"
-    );
-
-if (startButton) {
-
-    startButton.addEventListener(
-        "click",
-        function() {
-
-            startScenario();
-        }
-    );
-}
-
-
-// ============================================================
-// SETTINGS BUTTON
-// ============================================================
-
-const settingsButton =
-    document.getElementById(
-        "settingsButton"
-    );
-
-if (settingsButton) {
-
-    settingsButton.addEventListener(
-        "click",
-        function() {
-
-            hide("startScreen");
-
-            show("settingsScreen");
-        }
-    );
-}
-
-
-// ============================================================
-// SETTINGS BACK
-// ============================================================
-
-const settingsBack =
-    document.getElementById(
-        "settingsBack"
-    );
-
-if (settingsBack) {
-
-    settingsBack.addEventListener(
-        "click",
-        function() {
-
-            hide("settingsScreen");
-
-            show("startScreen");
-        }
-    );
-}
-
-
-// ============================================================
-// NEXT SCENARIO
-// ============================================================
-
-const nextButton =
-    document.getElementById(
-        "nextButton"
-    );
-
-if (nextButton) {
-
-    nextButton.addEventListener(
-        "click",
-        function() {
-
-            scenarioNumber++;
-
-            startScenario();
-        }
-    );
+            if (opponentCount)
+                opponentCount.textContent =
+                    settings.opponents;
+        };
 }
 
 
@@ -1657,12 +1317,9 @@ function gameLoop() {
 }
 
 
-// ============================================================
-// START
-// ============================================================
-
 gameLoop();
 
 console.log(
-    "Football IQ game.js loaded successfully."
+    "Football IQ game loaded"
 );
+}
