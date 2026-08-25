@@ -1,6 +1,6 @@
 // ============================================================
 // FOOTBALL IQ — GAME.JS
-// Close-up football decision trainer
+// Realistic mixed-player decision trainer
 // ============================================================
 
 const canvas = document.getElementById("gameCanvas");
@@ -58,7 +58,7 @@ resizeCanvas();
 
 
 // ============================================================
-// FIELD
+// FIELD SETTINGS
 // ============================================================
 
 const FIELD_WIDTH = 60;
@@ -66,30 +66,61 @@ const FIELD_HEIGHT = 70;
 
 
 // ============================================================
-// PLAYER OBJECT
+// PLAYER CREATION
 // ============================================================
 
 function createPlayer(x, y, team, number) {
 
     return {
-        x,
-        y,
-        team,
-        number,
+        x: x,
+        y: y,
+
+        team: team,
+        number: number,
 
         offside: false,
-
         selectable: team === "blue",
 
         screenX: 0,
         screenY: 0,
-        hitRadius: 35
+        hitRadius: 40
     };
 }
 
 
 // ============================================================
-// CREATE USER
+// RANDOM HELPERS
+// ============================================================
+
+function random(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+
+function randomInt(min, max) {
+    return Math.floor(
+        Math.random() * (max - min + 1)
+    ) + min;
+}
+
+
+// ============================================================
+// DISTANCE
+// ============================================================
+
+function distanceBetween(a, b) {
+
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+
+    return Math.sqrt(
+        dx * dx + dy * dy
+    );
+}
+
+
+// ============================================================
+// USER PLAYER
 // ============================================================
 
 function createUser() {
@@ -107,11 +138,15 @@ function createUser() {
 
 
 // ============================================================
-// RANDOM
+// BALL
 // ============================================================
 
-function random(min, max) {
-    return Math.random() * (max - min) + min;
+function createBall() {
+
+    ball = {
+        x: 0,
+        y: 2
+    };
 }
 
 
@@ -124,29 +159,43 @@ function generateTeammates() {
     teammates = [];
 
     /*
-     * These positions are intentionally close
-     * to the user.
+     * Players are deliberately spread around
+     * the user rather than forming a straight line.
      *
-     * The user is always at:
-     *
-     *              O
-     *
-     * Teammates appear around them.
+     * Some are behind the ball.
+     * Some are beside the ball.
+     * Some are ahead of the ball.
      */
 
-    const positions = [
-        [-14, -10],
-        [ 14, -8],
+    const possiblePositions = [
 
-        [-18,  3],
-        [ 18,  5],
+        [-17, -8],
+        [ 15, -7],
 
-        [-10, 15],
-        [ 11, 18],
+        [-20, -1],
+        [ 18,  2],
 
-        [-22, 12],
-        [ 22, 14]
+        [-12,  7],
+        [ 12,  9],
+
+        [-21, 10],
+        [ 21, 12],
+
+        [-8,  16],
+        [  9, 18]
     ];
+
+
+    /*
+     * Shuffle positions so every scenario
+     * can feel slightly different.
+     */
+
+    const shuffled =
+        [...possiblePositions]
+        .sort(
+            () => Math.random() - 0.5
+        );
 
 
     for (
@@ -155,13 +204,19 @@ function generateTeammates() {
         i++
     ) {
 
-        const p = positions[i];
+        const position =
+            shuffled[i];
 
         teammates.push(
             createPlayer(
-                p[0] + random(-2, 2),
-                p[1] + random(-2, 2),
+                position[0] +
+                    random(-2.5, 2.5),
+
+                position[1] +
+                    random(-2, 2),
+
                 "blue",
+
                 i + 1
             )
         );
@@ -178,31 +233,42 @@ function generateOpponents() {
     opponents = [];
 
     /*
-     * Defenders are also close.
+     * Opponents are deliberately mixed
+     * between the teammates.
      *
-     * They create pressure around the
-     * player instead of appearing miles away.
+     * This is NOT a blue-vs-red formation.
      */
 
-    const positions = [
-        [-8,  8],
-        [ 8,  9],
+    const possiblePositions = [
 
-        [-16, 16],
-        [ 16, 17],
+        [-10, -4],
+        [ 10, -2],
 
-        [-5, 24],
-        [ 7, 25],
+        [-18,  3],
+        [ 17,  5],
 
-        [-20, 25],
+        [-5,   8],
+        [  7, 11],
 
-        [20, 26],
+        [-19, 12],
+        [ 20, 14],
 
-        [0, 32],
-        [-13, 31],
-        [14, 32],
-        [0, 40]
+        [-11, 17],
+        [ 11, 20],
+
+        [ -3, 25],
+        [ 17, 25],
+
+        [-20, 24],
+        [  4, 30]
     ];
+
+
+    const shuffled =
+        [...possiblePositions]
+        .sort(
+            () => Math.random() - 0.5
+        );
 
 
     for (
@@ -211,13 +277,19 @@ function generateOpponents() {
         i++
     ) {
 
-        const p = positions[i];
+        const position =
+            shuffled[i];
 
         opponents.push(
             createPlayer(
-                p[0] + random(-2, 2),
-                p[1] + random(-2, 2),
+                position[0] +
+                    random(-2, 2),
+
+                position[1] +
+                    random(-2, 2),
+
                 "red",
+
                 i + 1
             )
         );
@@ -226,20 +298,35 @@ function generateOpponents() {
 
 
 // ============================================================
-// BALL
+// OFFSIDE LINE
 // ============================================================
 
-function createBall() {
+function getSecondLastDefender() {
 
-    ball = {
-        x: 0,
-        y: 2
-    };
+    if (opponents.length < 2) {
+        return null;
+    }
+
+
+    /*
+     * Highest Y = furthest forward.
+     *
+     * The second-highest defender is
+     * the second-last defender.
+     */
+
+    const defenders =
+        [...opponents].sort(
+            (a, b) => b.y - a.y
+        );
+
+
+    return defenders[1];
 }
 
 
 // ============================================================
-// OFFSIDE
+// CALCULATE OFFSIDE
 // ============================================================
 
 function calculateOffside() {
@@ -250,58 +337,125 @@ function calculateOffside() {
         }
     );
 
+
     if (!settings.offside) {
         return;
     }
 
-    if (opponents.length < 2) {
+
+    const secondLastDefender =
+        getSecondLastDefender();
+
+
+    if (!secondLastDefender) {
         return;
     }
 
-    /*
-     * The two highest defenders form
-     * the offside line.
-     */
-
-    const defenders =
-        [...opponents].sort(
-            (a, b) => b.y - a.y
-        );
-
-    const secondLast =
-        defenders[1];
 
     teammates.forEach(
         teammate => {
 
+            /*
+             * Player must be ahead of the ball
+             * AND ahead of the second-last defender.
+             */
+
             const aheadOfBall =
                 teammate.y > ball.y;
 
-            const beyondLine =
+
+            const aheadOfDefender =
                 teammate.y >
-                secondLast.y;
+                secondLastDefender.y;
+
 
             teammate.offside =
                 aheadOfBall &&
-                beyondLine;
+                aheadOfDefender;
         }
     );
 }
 
 
 // ============================================================
-// NEW SCENARIO
+// GUARANTEE LEGAL OPTIONS
+// ============================================================
+
+function guaranteeLegalOptions() {
+
+    /*
+     * We always want at least 3 legal
+     * teammates.
+     */
+
+    let legalPlayers =
+        teammates.filter(
+            p => !p.offside
+        );
+
+
+    if (legalPlayers.length >= 3) {
+        return;
+    }
+
+
+    /*
+     * Move some teammates backwards
+     * until we have enough legal options.
+     */
+
+    const sorted =
+        [...teammates]
+        .sort(
+            (a, b) => b.y - a.y
+        );
+
+
+    for (
+        const teammate
+        of sorted
+    ) {
+
+        if (legalPlayers.length >= 3) {
+            break;
+        }
+
+
+        teammate.y =
+            Math.min(
+                teammate.y,
+                ball.y + 3
+            );
+
+
+        teammate.offside = false;
+
+
+        legalPlayers =
+            teammates.filter(
+                p => !p.offside
+            );
+    }
+}
+
+
+// ============================================================
+// GENERATE SCENARIO
 // ============================================================
 
 function generateScenario() {
 
     createUser();
+
     createBall();
 
     generateTeammates();
+
     generateOpponents();
 
     calculateOffside();
+
+    guaranteeLegalOptions();
 
     scenarioActive = true;
 
@@ -319,30 +473,39 @@ function project(x, y) {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
+    const left = w * 0.055;
+    const right = w * 0.945;
+
+    const top = h * 0.20;
+    const bottom = h * 0.96;
+
+
     /*
-     * We deliberately keep the playable area
-     * close to the centre of the screen.
+     * Convert virtual field coordinates
+     * into screen coordinates.
      */
 
-    const fieldLeft = w * 0.06;
-    const fieldRight = w * 0.94;
+    const normalizedX =
+        (x + FIELD_WIDTH / 2) /
+        FIELD_WIDTH;
 
-    const fieldTop = h * 0.22;
-    const fieldBottom = h * 0.95;
 
-    const screenX =
-        w / 2 +
-        (x / FIELD_WIDTH) *
-        (fieldRight - fieldLeft);
+    const normalizedY =
+        (y + 15) /
+        FIELD_HEIGHT;
 
-    const screenY =
-        fieldBottom -
-        ((y + 15) / FIELD_HEIGHT) *
-        (fieldBottom - fieldTop);
 
     return {
-        x: screenX,
-        y: screenY
+
+        x:
+            left +
+            normalizedX *
+            (right - left),
+
+        y:
+            bottom -
+            normalizedY *
+            (bottom - top)
     };
 }
 
@@ -356,9 +519,11 @@ function drawPitch() {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
+
     // BACKGROUND
 
-    ctx.fillStyle = "#111820";
+    ctx.fillStyle =
+        "#111820";
 
     ctx.fillRect(
         0,
@@ -370,26 +535,34 @@ function drawPitch() {
 
     // STADIUM
 
-    ctx.fillStyle = "#3e4449";
+    ctx.fillStyle =
+        "#3e4449";
 
     ctx.fillRect(
         0,
-        h * 0.12,
+        h * 0.10,
         w,
-        h * 0.18
+        h * 0.16
     );
 
 
     // PITCH
 
-    const left = w * 0.06;
-    const right = w * 0.94;
+    const left =
+        w * 0.055;
 
-    const top = h * 0.22;
-    const bottom = h * 0.96;
+    const right =
+        w * 0.945;
+
+    const top =
+        h * 0.20;
+
+    const bottom =
+        h * 0.96;
 
 
-    ctx.fillStyle = "#247b42";
+    ctx.fillStyle =
+        "#247b42";
 
     ctx.fillRect(
         left,
@@ -399,12 +572,17 @@ function drawPitch() {
     );
 
 
-    // STRIPES
+    // GRASS STRIPES
 
     const stripeHeight =
-        (bottom - top) / 10;
+        (bottom - top) / 12;
 
-    for (let i = 0; i < 10; i++) {
+
+    for (
+        let i = 0;
+        i < 12;
+        i++
+    ) {
 
         if (i % 2 === 0) {
 
@@ -413,17 +591,22 @@ function drawPitch() {
 
             ctx.fillRect(
                 left,
-                top + i * stripeHeight,
+                top +
+                    i * stripeHeight,
+
                 right - left,
+
                 stripeHeight
             );
         }
     }
 
 
-    // SIDELINES
+    // OUTER LINES
 
-    ctx.strokeStyle = "white";
+    ctx.strokeStyle =
+        "rgba(255,255,255,0.9)";
+
     ctx.lineWidth = 3;
 
     ctx.strokeRect(
@@ -434,21 +617,36 @@ function drawPitch() {
     );
 
 
-    // HORIZONTAL FIELD LINES
+    // FIELD LINES
 
-    for (let i = 1; i < 5; i++) {
+    for (
+        let i = 1;
+        i < 5;
+        i++
+    ) {
 
         const y =
             top +
             (bottom - top) *
             (i / 5);
 
-        ctx.lineWidth = 2;
 
         ctx.beginPath();
 
-        ctx.moveTo(left, y);
-        ctx.lineTo(right, y);
+        ctx.moveTo(
+            left,
+            y
+        );
+
+        ctx.lineTo(
+            right,
+            y
+        );
+
+        ctx.strokeStyle =
+            "rgba(255,255,255,0.65)";
+
+        ctx.lineWidth = 2;
 
         ctx.stroke();
     }
@@ -456,18 +654,21 @@ function drawPitch() {
 
     // CENTRE CIRCLE
 
-    const centreX = w / 2;
+    const centreX =
+        w / 2;
 
     const centreY =
         top +
-        (bottom - top) * 0.50;
+        (bottom - top) *
+        0.5;
+
 
     ctx.beginPath();
 
     ctx.arc(
         centreX,
         centreY,
-        Math.min(w, h) * 0.09,
+        Math.min(w, h) * 0.08,
         0,
         Math.PI * 2
     );
@@ -487,14 +688,15 @@ function drawPitch() {
         Math.PI * 2
     );
 
-    ctx.fillStyle = "white";
+    ctx.fillStyle =
+        "white";
 
     ctx.fill();
 }
 
 
 // ============================================================
-// BLOCKY PLAYER
+// DRAW BLOCKY PLAYER
 // ============================================================
 
 function drawPlayer(p) {
@@ -505,24 +707,38 @@ function drawPlayer(p) {
             p.y
         );
 
-    const x = pos.x;
-    const y = pos.y;
 
-    const size =
+    const x =
+        pos.x;
+
+    const y =
+        pos.y;
+
+
+    /*
+     * Slightly smaller players when
+     * they are further away.
+     */
+
+    const depth =
         Math.max(
             0.75,
             Math.min(
-                window.innerWidth / 700,
-                1.35
+                1.25,
+                1.15 -
+                p.y * 0.008
             )
         );
 
 
-    p.screenX = x;
-    p.screenY = y;
+    p.screenX =
+        x;
+
+    p.screenY =
+        y;
 
     p.hitRadius =
-        35 * size;
+        34 * depth;
 
 
     // SHADOW
@@ -531,9 +747,9 @@ function drawPlayer(p) {
 
     ctx.ellipse(
         x,
-        y + 7 * size,
-        14 * size,
-        5 * size,
+        y + 7 * depth,
+        14 * depth,
+        5 * depth,
         0,
         0,
         Math.PI * 2
@@ -556,8 +772,8 @@ function drawPlayer(p) {
 
         ctx.arc(
             x,
-            y - 18 * size,
-            27 * size,
+            y - 20 * depth,
+            28 * depth,
             0,
             Math.PI * 2
         );
@@ -571,18 +787,24 @@ function drawPlayer(p) {
     }
 
 
+    // TEAM COLOUR
+
+    const teamColour =
+        p.team === "blue"
+            ? "#2586ed"
+            : "#e63946";
+
+
     // BODY
 
     ctx.fillStyle =
-        p.team === "blue"
-            ? "#2185ed"
-            : "#e63946";
+        teamColour;
 
     ctx.fillRect(
-        x - 10 * size,
-        y - 30 * size,
-        20 * size,
-        22 * size
+        x - 10 * depth,
+        y - 30 * depth,
+        20 * depth,
+        22 * depth
     );
 
 
@@ -592,84 +814,85 @@ function drawPlayer(p) {
         "#d79b73";
 
     ctx.fillRect(
-        x - 8 * size,
-        y - 46 * size,
-        16 * size,
-        16 * size
+        x - 8 * depth,
+        y - 46 * depth,
+        16 * depth,
+        16 * depth
     );
 
 
     // HAIR
 
-    ctx.fillStyle = "#202020";
+    ctx.fillStyle =
+        "#202020";
 
     ctx.fillRect(
-        x - 8 * size,
-        y - 47 * size,
-        16 * size,
-        5 * size
+        x - 8 * depth,
+        y - 47 * depth,
+        16 * depth,
+        5 * depth
     );
 
 
     // ARMS
 
     ctx.fillStyle =
-        p.team === "blue"
-            ? "#2185ed"
-            : "#e63946";
+        teamColour;
 
     ctx.fillRect(
-        x - 16 * size,
-        y - 29 * size,
-        6 * size,
-        18 * size
+        x - 16 * depth,
+        y - 29 * depth,
+        6 * depth,
+        18 * depth
     );
 
     ctx.fillRect(
-        x + 10 * size,
-        y - 29 * size,
-        6 * size,
-        18 * size
+        x + 10 * depth,
+        y - 29 * depth,
+        6 * depth,
+        18 * depth
     );
 
 
     // LEGS
 
     ctx.fillRect(
-        x - 8 * size,
-        y - 8 * size,
-        7 * size,
-        15 * size
+        x - 8 * depth,
+        y - 8 * depth,
+        7 * depth,
+        15 * depth
     );
 
     ctx.fillRect(
-        x + 1 * size,
-        y - 8 * size,
-        7 * size,
-        15 * size
+        x + 1 * depth,
+        y - 8 * depth,
+        7 * depth,
+        15 * depth
     );
 
 
     // NUMBER
 
-    ctx.fillStyle = "white";
+    ctx.fillStyle =
+        "white";
 
     ctx.font =
         `bold ${Math.max(
             10,
-            11 * size
+            11 * depth
         )}px Arial`;
 
-    ctx.textAlign = "center";
+    ctx.textAlign =
+        "center";
 
     ctx.fillText(
         p.number,
         x,
-        y - 15 * size
+        y - 15 * depth
     );
 
 
-    // SELECTABLE BORDER
+    // SELECTABLE OUTLINE
 
     if (
         p.selectable &&
@@ -677,22 +900,22 @@ function drawPlayer(p) {
     ) {
 
         ctx.strokeStyle =
-            "rgba(255,255,255,0.65)";
+            "rgba(255,255,255,0.55)";
 
         ctx.lineWidth = 2;
 
         ctx.strokeRect(
-            x - 17 * size,
-            y - 49 * size,
-            34 * size,
-            43 * size
+            x - 17 * depth,
+            y - 49 * depth,
+            34 * depth,
+            43 * depth
         );
     }
 }
 
 
 // ============================================================
-// BALL
+// DRAW BALL
 // ============================================================
 
 function drawBall() {
@@ -704,12 +927,14 @@ function drawBall() {
         );
 
 
+    // SHADOW
+
     ctx.beginPath();
 
     ctx.ellipse(
         pos.x,
         pos.y + 5,
-        8,
+        9,
         4,
         0,
         0,
@@ -722,6 +947,8 @@ function drawBall() {
     ctx.fill();
 
 
+    // BALL
+
     ctx.beginPath();
 
     ctx.arc(
@@ -732,11 +959,13 @@ function drawBall() {
         Math.PI * 2
     );
 
-    ctx.fillStyle = "white";
+    ctx.fillStyle =
+        "white";
 
     ctx.fill();
 
-    ctx.strokeStyle = "#222";
+    ctx.strokeStyle =
+        "#222";
 
     ctx.lineWidth = 1.5;
 
@@ -753,22 +982,25 @@ function drawScene() {
     drawPitch();
 
 
-    // Furthest first
+    /*
+     * Draw players furthest away first.
+     */
 
-    opponents
-        .sort((a, b) => b.y - a.y)
-        .forEach(drawPlayer);
-
-    teammates
-        .sort((a, b) => b.y - a.y)
-        .forEach(drawPlayer);
+    const allPlayers = [
+        ...opponents,
+        ...teammates,
+        player
+    ].filter(Boolean);
 
 
-    // User
+    allPlayers.sort(
+        (a, b) => b.y - a.y
+    );
 
-    if (player) {
-        drawPlayer(player);
-    }
+
+    allPlayers.forEach(
+        drawPlayer
+    );
 
 
     drawBall();
@@ -776,28 +1008,42 @@ function drawScene() {
 
 
 // ============================================================
-// FIND CLICKED PLAYER
+// CLICK DETECTION
 // ============================================================
 
-function findClickedPlayer(x, y) {
+function findClickedPlayer(
+    mouseX,
+    mouseY
+) {
 
     let closest = null;
-    let closestDistance = Infinity;
+    let closestDistance =
+        Infinity;
 
 
-    for (const teammate of teammates) {
+    for (
+        const teammate
+        of teammates
+    ) {
 
-        if (!teammate.selectable) {
+        if (
+            !teammate.selectable
+        ) {
             continue;
         }
 
 
         const dx =
-            x - teammate.screenX;
+            mouseX -
+            teammate.screenX;
+
 
         const dy =
-            y -
-            (teammate.screenY - 20);
+            mouseY -
+            (
+                teammate.screenY -
+                20
+            );
 
 
         const distance =
@@ -809,12 +1055,13 @@ function findClickedPlayer(x, y) {
 
         if (
             distance <
-            teammate.hitRadius &&
+                teammate.hitRadius &&
             distance <
-            closestDistance
+                closestDistance
         ) {
 
-            closest = teammate;
+            closest =
+                teammate;
 
             closestDistance =
                 distance;
@@ -850,14 +1097,16 @@ canvas.addEventListener(
 
         if (target) {
 
-            makePass(target);
+            makePass(
+                target
+            );
         }
     }
 );
 
 
 // ============================================================
-// PASS
+// PASS SCORING
 // ============================================================
 
 function makePass(target) {
@@ -865,6 +1114,7 @@ function makePass(target) {
     if (!scenarioActive) {
         return;
     }
+
 
     scenarioActive = false;
 
@@ -876,8 +1126,20 @@ function makePass(target) {
         ) / 1000;
 
 
-    let score = 100;
+    let decisionScore = 100;
 
+
+    // OFFSIDE
+
+    if (
+        target.offside
+    ) {
+
+        decisionScore -= 80;
+    }
+
+
+    // DISTANCE
 
     const distance =
         distanceBetween(
@@ -886,25 +1148,102 @@ function makePass(target) {
         );
 
 
-    if (distance > 25) {
-        score -= 15;
+    if (
+        distance > 25
+    ) {
+
+        decisionScore -= 15;
+
+    } else if (
+        distance > 18
+    ) {
+
+        decisionScore -= 7;
     }
 
 
-    if (target.offside) {
-        score -= 80;
+    // NEARBY OPPONENT
+
+    let closestOpponent =
+        Infinity;
+
+
+    for (
+        const opponent
+        of opponents
+    ) {
+
+        const d =
+            distanceBetween(
+                target,
+                opponent
+            );
+
+
+        if (
+            d <
+            closestOpponent
+        ) {
+
+            closestOpponent =
+                d;
+        }
     }
 
 
-    const result =
+    if (
+        closestOpponent < 5
+    ) {
+
+        decisionScore -= 35;
+
+    } else if (
+        closestOpponent < 8
+    ) {
+
+        decisionScore -= 15;
+    }
+
+
+    decisionScore =
         Math.max(
             0,
-            Math.round(score)
+            Math.round(
+                decisionScore
+            )
+        );
+
+
+    // TIMING
+
+    let timingScore =
+        Math.round(
+            100 -
+            seconds * 15
+        );
+
+
+    timingScore =
+        Math.max(
+            25,
+            Math.min(
+                100,
+                timingScore
+            )
+        );
+
+
+    const overall =
+        Math.round(
+            decisionScore * 0.7 +
+            timingScore * 0.3
         );
 
 
     showResult(
-        result,
+        overall,
+        decisionScore,
+        timingScore,
         seconds,
         target
     );
@@ -912,30 +1251,13 @@ function makePass(target) {
 
 
 // ============================================================
-// DISTANCE
-// ============================================================
-
-function distanceBetween(a, b) {
-
-    const dx =
-        a.x - b.x;
-
-    const dy =
-        a.y - b.y;
-
-    return Math.sqrt(
-        dx * dx +
-        dy * dy
-    );
-}
-
-
-// ============================================================
-// RESULT
+// RESULT SCREEN
 // ============================================================
 
 function showResult(
-    score,
+    overall,
+    decisionScore,
+    timingScore,
     seconds,
     target
 ) {
@@ -943,104 +1265,126 @@ function showResult(
     gameState = "result";
 
 
-    const overall =
+    const overallElement =
         document.getElementById(
             "overallScore"
         );
 
-    const decision =
+    const decisionElement =
         document.getElementById(
             "decisionScore"
         );
 
-    const timing =
+    const timingElement =
         document.getElementById(
             "timingScore"
         );
 
-    const time =
+    const timeElement =
         document.getElementById(
             "decisionTime"
         );
 
-    const message =
+    const messageElement =
         document.getElementById(
             "resultMessage"
         );
 
-    const analysis =
+    const analysisElement =
         document.getElementById(
             "analysis"
         );
 
 
-    if (overall)
-        overall.textContent = score;
+    if (overallElement)
+        overallElement.textContent =
+            overall;
 
-    if (decision)
-        decision.textContent = score;
 
-    if (timing)
-        timing.textContent =
-            Math.max(
-                0,
-                Math.round(
-                    100 -
-                    seconds * 15
-                )
-            );
+    if (decisionElement)
+        decisionElement.textContent =
+            decisionScore;
 
-    if (time)
-        time.textContent =
+
+    if (timingElement)
+        timingElement.textContent =
+            timingScore;
+
+
+    if (timeElement)
+        timeElement.textContent =
             seconds.toFixed(2) + "s";
 
 
-    if (target.offside) {
+    if (
+        settings.offside &&
+        target.offside
+    ) {
 
-        if (message)
-            message.textContent =
+        if (messageElement)
+            messageElement.textContent =
                 "OFFSIDE!";
 
-        if (analysis)
-            analysis.textContent =
-                "Your teammate was in an offside position.";
-    }
 
-    else if (score >= 90) {
+        if (analysisElement)
+            analysisElement.textContent =
+                "Your teammate was ahead of the second-last defender when the pass was made.";
 
-        if (message)
-            message.textContent =
+    } else if (
+        overall >= 90
+    ) {
+
+        if (messageElement)
+            messageElement.textContent =
                 "EXCELLENT DECISION";
 
-        if (analysis)
-            analysis.textContent =
-                "Great passing option.";
-    }
 
-    else if (score >= 70) {
+        if (analysisElement)
+            analysisElement.textContent =
+                "Excellent awareness and passing choice.";
 
-        if (message)
-            message.textContent =
+    } else if (
+        overall >= 75
+    ) {
+
+        if (messageElement)
+            messageElement.textContent =
                 "GOOD DECISION";
 
-        if (analysis)
-            analysis.textContent =
-                "A solid passing option.";
-    }
 
-    else {
+        if (analysisElement)
+            analysisElement.textContent =
+                "A good passing option with relatively low pressure.";
 
-        if (message)
-            message.textContent =
+    } else if (
+        overall >= 50
+    ) {
+
+        if (messageElement)
+            messageElement.textContent =
+                "COULD BE BETTER";
+
+
+        if (analysisElement)
+            analysisElement.textContent =
+                "There was a possible option, but another pass may have been safer.";
+
+    } else {
+
+        if (messageElement)
+            messageElement.textContent =
                 "POOR DECISION";
 
-        if (analysis)
-            analysis.textContent =
-                "There was probably a safer option.";
+
+        if (analysisElement)
+            analysisElement.textContent =
+                "Look around before passing and identify the safest option.";
     }
 
 
-    show("resultScreen");
+    showScreen(
+        "resultScreen"
+    );
 }
 
 
@@ -1048,23 +1392,85 @@ function showResult(
 // SCREEN HELPERS
 // ============================================================
 
-function hide(id) {
+function hideScreen(id) {
 
     const element =
         document.getElementById(id);
 
-    if (element)
-        element.classList.add("hidden");
+    if (element) {
+
+        element.classList.add(
+            "hidden"
+        );
+    }
 }
 
 
-function show(id) {
+function showScreen(id) {
 
     const element =
         document.getElementById(id);
 
-    if (element)
-        element.classList.remove("hidden");
+    if (element) {
+
+        element.classList.remove(
+            "hidden"
+        );
+    }
+}
+
+
+// ============================================================
+// START SCENARIO
+// ============================================================
+
+function startScenario() {
+
+    gameState =
+        "playing";
+
+
+    generateScenario();
+
+
+    const scenarioText =
+        document.getElementById(
+            "scenarioNumber"
+        );
+
+
+    if (scenarioText) {
+
+        scenarioText.textContent =
+            "SCENARIO " +
+            scenarioNumber;
+    }
+
+
+    const instruction =
+        document.getElementById(
+            "instruction"
+        );
+
+
+    if (instruction) {
+
+        instruction.textContent =
+            "TAP A TEAMMATE TO PASS";
+    }
+
+
+    hideScreen(
+        "startScreen"
+    );
+
+    hideScreen(
+        "settingsScreen"
+    );
+
+    hideScreen(
+        "resultScreen"
+    );
 }
 
 
@@ -1076,6 +1482,7 @@ const startButton =
     document.getElementById(
         "startButton"
     );
+
 
 if (startButton) {
 
@@ -1096,13 +1503,19 @@ const settingsButton =
         "settingsButton"
     );
 
+
 if (settingsButton) {
 
     settingsButton.onclick =
         function() {
 
-            hide("startScreen");
-            show("settingsScreen");
+            hideScreen(
+                "startScreen"
+            );
+
+            showScreen(
+                "settingsScreen"
+            );
         };
 }
 
@@ -1116,13 +1529,19 @@ const settingsBack =
         "settingsBack"
     );
 
+
 if (settingsBack) {
 
     settingsBack.onclick =
         function() {
 
-            hide("settingsScreen");
-            show("startScreen");
+            hideScreen(
+                "settingsScreen"
+            );
+
+            showScreen(
+                "startScreen"
+            );
         };
 }
 
@@ -1136,6 +1555,7 @@ const nextButton =
         "nextButton"
     );
 
+
 if (nextButton) {
 
     nextButton.onclick =
@@ -1143,56 +1563,18 @@ if (nextButton) {
 
             scenarioNumber++;
 
-            hide("resultScreen");
-
             startScenario();
         };
 }
 
 
 // ============================================================
-// SETTINGS CONTROLS
+// OFFSIDE SETTING
 // ============================================================
 
 const offsideButton =
     document.getElementById(
         "offsideButton"
-    );
-
-const ringsButton =
-    document.getElementById(
-        "ringsButton"
-    );
-
-const teamCount =
-    document.getElementById(
-        "teamCount"
-    );
-
-const opponentCount =
-    document.getElementById(
-        "opponentCount"
-    );
-
-
-const teamPlus =
-    document.getElementById(
-        "teamPlus"
-    );
-
-const teamMinus =
-    document.getElementById(
-        "teamMinus"
-    );
-
-const opponentPlus =
-    document.getElementById(
-        "opponentPlus"
-    );
-
-const opponentMinus =
-    document.getElementById(
-        "opponentMinus"
     );
 
 
@@ -1204,12 +1586,23 @@ if (offsideButton) {
             settings.offside =
                 !settings.offside;
 
+
             offsideButton.textContent =
                 settings.offside
                     ? "ON"
                     : "OFF";
         };
 }
+
+
+// ============================================================
+// RINGS SETTING
+// ============================================================
+
+const ringsButton =
+    document.getElementById(
+        "ringsButton"
+    );
 
 
 if (ringsButton) {
@@ -1220,12 +1613,33 @@ if (ringsButton) {
             settings.offsideRings =
                 !settings.offsideRings;
 
+
             ringsButton.textContent =
                 settings.offsideRings
                     ? "ON"
                     : "OFF";
         };
 }
+
+
+// ============================================================
+// TEAMMATES
+// ============================================================
+
+const teamCount =
+    document.getElementById(
+        "teamCount"
+    );
+
+const teamPlus =
+    document.getElementById(
+        "teamPlus"
+    );
+
+const teamMinus =
+    document.getElementById(
+        "teamMinus"
+    );
 
 
 if (teamPlus) {
@@ -1239,9 +1653,12 @@ if (teamPlus) {
                     settings.teammates + 1
                 );
 
-            if (teamCount)
+
+            if (teamCount) {
+
                 teamCount.textContent =
                     settings.teammates;
+            }
         };
 }
 
@@ -1253,15 +1670,38 @@ if (teamMinus) {
 
             settings.teammates =
                 Math.max(
-                    2,
+                    3,
                     settings.teammates - 1
                 );
 
-            if (teamCount)
+
+            if (teamCount) {
+
                 teamCount.textContent =
                     settings.teammates;
+            }
         };
 }
+
+
+// ============================================================
+// OPPONENTS
+// ============================================================
+
+const opponentCount =
+    document.getElementById(
+        "opponentCount"
+    );
+
+const opponentPlus =
+    document.getElementById(
+        "opponentPlus"
+    );
+
+const opponentMinus =
+    document.getElementById(
+        "opponentMinus"
+    );
 
 
 if (opponentPlus) {
@@ -1275,9 +1715,12 @@ if (opponentPlus) {
                     settings.opponents + 1
                 );
 
-            if (opponentCount)
+
+            if (opponentCount) {
+
                 opponentCount.textContent =
                     settings.opponents;
+            }
         };
 }
 
@@ -1289,13 +1732,16 @@ if (opponentMinus) {
 
             settings.opponents =
                 Math.max(
-                    2,
+                    4,
                     settings.opponents - 1
                 );
 
-            if (opponentCount)
+
+            if (opponentCount) {
+
                 opponentCount.textContent =
                     settings.opponents;
+            }
         };
 }
 
@@ -1306,10 +1752,13 @@ if (opponentMinus) {
 
 function gameLoop() {
 
-    if (gameState === "playing") {
+    if (
+        gameState === "playing"
+    ) {
 
         drawScene();
     }
+
 
     requestAnimationFrame(
         gameLoop
@@ -1317,9 +1766,12 @@ function gameLoop() {
 }
 
 
+// ============================================================
+// START LOOP
+// ============================================================
+
 gameLoop();
 
 console.log(
-    "Football IQ game loaded"
+    "FOOTBALL IQ GAME.JS LOADED"
 );
-}
